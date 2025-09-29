@@ -54,26 +54,26 @@ public class Equipo {
     }
 
     public int getGolesFavor() {
-        return golesContra;
+        return golesFavor;
     }
 
     public void setGolesFavor(int golesFavor) {
         if (golesFavor >= 0) {
             this.golesFavor = golesFavor;
         } else {
-            System.out.println("Los goles a favor deben ser mayor o igual a 0");
+             throw new IllegalArgumentException("Los goles a favor deben ser mayor o igual a 0");
         }
     }
 
     public int getGolesContra() {
-        return golesFavor;
+        return golesContra;
     }
 
     public void setGolesContra(int golesContra) {
         if (golesContra >= 0) {
             this.golesContra = golesContra;
         } else {
-            System.out.println("Los goles en contra deben ser mayor o igual a 0");
+            throw new IllegalArgumentException("Los goles en contra deben ser mayor o igual a 0");
         }
     }
 

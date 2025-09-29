@@ -1,6 +1,7 @@
 package model;
 
 import java.time.LocalTime;
+import java.util.Objects;
 
 public class Partido {
     private Equipo equipoLocal;
@@ -10,81 +11,44 @@ public class Partido {
     private boolean jugado;
     private LocalTime hora;
 
-    public Partido(Equipo equipoLocal, Equipo equipoVisitante, int golesLocal, int golesVisitante, boolean jugado,
-            LocalTime hora) {
-        setEquipoLocal(equipoLocal);
-        setEquipoVisitante(equipoVisitante);
-        setGolesLocal(golesLocal);
-        setGolesVisitante(golesVisitante);
-        setJugado(jugado);
-        setHora(hora);
+    public Partido(Equipo equipoLocal, Equipo equipoVisitante, LocalTime hora) {
+        this.equipoLocal = Objects.requireNonNull(equipoLocal, "El equipo local no puede ser nulo");
+        this.equipoVisitante = Objects.requireNonNull(equipoVisitante, "El equipo visitante no puede ser nulo");
+        if (equipoLocal.equals(equipoVisitante)) {
+            throw new IllegalArgumentException("Un equipo no puede jugar contra sí mismo");
+        }
+        this.hora = Objects.requireNonNull(hora, "La hora no puede ser nula");
+        this.golesLocal = 0;
+        this.golesVisitante = 0;
+        this.jugado = false;
     }
 
     public Equipo getEquipoLocal() {
         return equipoLocal;
     }
 
-    public void setEquipoLocal(Equipo equipoLocal) {
-        if (equipoLocal == null || equipoLocal.getNombre() == null || equipoLocal.getNombre().trim().isEmpty()) {
-            throw new IllegalArgumentException("El equipo local no puede estar vacío.");
-        }
-        this.equipoLocal = equipoLocal;
-
-    }
-
     public Equipo getEquipoVisitante() {
         return equipoVisitante;
-    }
-
-    public void setEquipoVisitante(Equipo equipoVisitante) {
-        if (equipoVisitante == null || equipoVisitante.getNombre() == null
-                || equipoVisitante.getNombre().trim().isEmpty()) {
-            throw new IllegalArgumentException("El equipo visitante no puede estar vacío.");
-        }
-        this.equipoVisitante = equipoVisitante;
     }
 
     public int getGolesLocal() {
         return golesLocal;
     }
 
-    public void setGolesLocal(int golesLocal) {
-        if (golesLocal >= 0) {
-            this.golesLocal = golesLocal;
-        } else {
-            throw new IllegalArgumentException("los goles del local deben ser mayor o igual a 0");
-        }
-    }
-
     public int getGolesVisitante() {
         return golesVisitante;
     }
-
-    public void setGolesVisitante(int golesVisitante) {
-        if (golesVisitante >= 0) {
-            this.golesVisitante = golesVisitante;
-        } else {
-            throw new IllegalArgumentException("los goles de visitante deben ser mayores o iguales a 0");
-        }
-    }
-
     public boolean getJugado() {
-        return jugado;
-    }
+    return jugado;
+}
 
-    public void setJugado(boolean jugado) {
-        this.jugado = jugado;
+
+    public boolean isJugado() {
+        return jugado;
     }
 
     public LocalTime getHora() {
         return hora;
-    }
-
-    public void setHora(LocalTime hora) {
-        if (hora == null) {
-            throw new IllegalArgumentException("la hora no puede ser nula");
-        }
-        this.hora = hora;
     }
 
     public void registrarResultados(int golesLocal, int golesVisitante) {
@@ -93,30 +57,16 @@ public class Partido {
         }
         this.golesLocal = golesLocal;
         this.golesVisitante = golesVisitante;
-        this.jugado = true; // cuando ya hay resultados, el partido se marca como jugado
+        this.jugado = true;
     }
 
     public Equipo obtenerGanador() {
         if (!jugado) {
             throw new IllegalStateException("El partido aún no se ha jugado.");
         }
-
-        if (golesLocal > golesVisitante) {
-            return equipoLocal;
-        } else if (golesVisitante > golesLocal) {
-            return equipoVisitante;
-        } else {
-            return null;
-        }
-    }
-
-    public String resumen() {
-        if (!jugado) {
-            return equipoLocal.getNombre() + " vs " + equipoVisitante.getNombre() +
-                    " (Pendiente a las " + hora + ")";
-        }
-        return equipoLocal.getNombre() + " " + golesLocal +
-                " - " + golesVisitante + " " + equipoVisitante.getNombre();
+        if (golesLocal > golesVisitante) return equipoLocal;
+        if (golesVisitante > golesLocal) return equipoVisitante;
+        return null; // empate
     }
 
     public boolean esEmpate() {
@@ -131,4 +81,32 @@ public class Partido {
         return jugado && golesVisitante > golesLocal;
     }
 
+    public String resumen() {
+        if (!jugado) {
+            return equipoLocal.getNombre() + " vs " + equipoVisitante.getNombre() +
+                    " (Pendiente a las " + hora + ")";
+        }
+        return equipoLocal.getNombre() + " " + golesLocal +
+                " - " + golesVisitante + " " + equipoVisitante.getNombre();
+    }
+
+    @Override
+    public String toString() {
+        return resumen();
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (!(o instanceof Partido)) return false;
+        Partido partido = (Partido) o;
+        return Objects.equals(equipoLocal, partido.equipoLocal) &&
+               Objects.equals(equipoVisitante, partido.equipoVisitante) &&
+               Objects.equals(hora, partido.hora);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(equipoLocal, equipoVisitante, hora);
+    }
 }

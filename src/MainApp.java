@@ -12,16 +12,17 @@ public class MainApp extends JFrame {
         torneo = new Torneo("Copa Intercolegial");
 
         setTitle("⚽ Sistema de Torneo de Fútbol");
-        setSize(600, 400);
+        setSize(650, 450);
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setLocationRelativeTo(null);
 
-        JPanel panel = new JPanel(new GridLayout(7, 1, 10, 10));
+        JPanel panel = new JPanel(new GridLayout(8, 1, 10, 10));
 
         JButton btnAgregarEquipo = new JButton("➕ Agregar Equipo");
         JButton btnAgregarJugador = new JButton("👤 Agregar Jugador a Equipo");
         JButton btnProgramarPartido = new JButton("📅 Programar Partido");
         JButton btnRegistrarResultado = new JButton("🏆 Registrar Resultado");
+        JButton btnAgregarTarjeta = new JButton("🟨🟥 Agregar Tarjeta");
         JButton btnMostrarTabla = new JButton("📊 Mostrar Tabla de Posiciones");
         JButton btnMostrarPartidos = new JButton("📋 Mostrar Partidos");
         JButton btnSalir = new JButton("❌ Salir");
@@ -30,6 +31,7 @@ public class MainApp extends JFrame {
         panel.add(btnAgregarJugador);
         panel.add(btnProgramarPartido);
         panel.add(btnRegistrarResultado);
+        panel.add(btnAgregarTarjeta);
         panel.add(btnMostrarTabla);
         panel.add(btnMostrarPartidos);
         panel.add(btnSalir);
@@ -40,13 +42,13 @@ public class MainApp extends JFrame {
         btnAgregarJugador.addActionListener(e -> agregarJugador());
         btnProgramarPartido.addActionListener(e -> programarPartido());
         btnRegistrarResultado.addActionListener(e -> registrarResultado());
+        btnAgregarTarjeta.addActionListener(e -> registrarTarjetas());
         btnMostrarTabla.addActionListener(e -> torneo.mostrarTablaPosiciones());
         btnMostrarPartidos.addActionListener(e -> torneo.mostrarPartidos());
         btnSalir.addActionListener(e -> System.exit(0));
     }
 
     // ---------------- Helpers ----------------
-
     private String pedirTextoValido(String mensaje) {
         while (true) {
             String input = JOptionPane.showInputDialog(this, mensaje);
@@ -91,7 +93,6 @@ public class MainApp extends JFrame {
     }
 
     // ---------------- Opciones ----------------
-
     private void agregarEquipo() {
         String nombre = pedirTextoValido("Ingrese el nombre del equipo:");
         if (nombre == null) return;
@@ -111,7 +112,6 @@ public class MainApp extends JFrame {
             return;
         }
 
-        // nombres de equipos
         List<Equipo> listaEquipos = torneo.getEquipos();
         String[] nombresEquipos = new String[listaEquipos.size()];
         for (int i = 0; i < listaEquipos.size(); i++) {
@@ -141,7 +141,17 @@ public class MainApp extends JFrame {
             Integer edad = pedirEnteroValido("Edad del jugador " + nombre + " (15-50):", 15, 50);
             if (edad == null) return;
 
-            String posicion = pedirTextoValido("Posición del jugador " + nombre + ":");
+            // 🔹 Selección de posición con JComboBox usando el enum
+            Posicion[] opciones = Posicion.values();
+            Posicion posicion = (Posicion) JOptionPane.showInputDialog(
+                    this,
+                    "Seleccione la posición del jugador " + nombre + ":",
+                    "Posición",
+                    JOptionPane.QUESTION_MESSAGE,
+                    null,
+                    opciones,
+                    opciones[0]
+            );
             if (posicion == null) return;
 
             Integer numero;
@@ -149,7 +159,6 @@ public class MainApp extends JFrame {
                 numero = pedirEnteroValido("Número del jugador " + nombre + " (1-99):", 1, 99);
                 if (numero == null) return;
 
-                // verificación sin stream
                 boolean repetido = false;
                 for (Jugador j : equipo.getJugadores()) {
                     if (j.getNumero() == numero) {
@@ -169,7 +178,7 @@ public class MainApp extends JFrame {
                 equipo.agregarJugador(jugador);
             } catch (Exception ex) {
                 JOptionPane.showMessageDialog(this, "Error al crear el jugador: " + ex.getMessage());
-                i--; // repetir
+                i--;
             }
         }
 
@@ -182,7 +191,6 @@ public class MainApp extends JFrame {
             return;
         }
 
-        // filtrar equipos con >=10 jugadores
         List<Equipo> equiposValidos = new ArrayList<>();
         for (Equipo e : torneo.getEquipos()) {
             if (e.getJugadores().size() >= 10) {
@@ -239,7 +247,6 @@ public class MainApp extends JFrame {
             return;
         }
 
-        // filtrar partidos pendientes
         List<Partido> pendientes = new ArrayList<>();
         for (Partido p : torneo.getPartidos()) {
             if (!p.getJugado()) pendientes.add(p);
@@ -269,10 +276,7 @@ public class MainApp extends JFrame {
             }
         }
 
-        if (partido == null) {
-            JOptionPane.showMessageDialog(this, "Partido no encontrado.");
-            return;
-        }
+        if (partido == null) return;
 
         Integer golesLocal = pedirEnteroValido("Goles de " + partido.getEquipoLocal().getNombre() + " (>=0):", 0, 1000);
         if (golesLocal == null) return;
@@ -281,9 +285,94 @@ public class MainApp extends JFrame {
 
         try {
             partido.registrarResultados(golesLocal, golesVisitante);
+
+            // Cumplir suspensión después del partido
+            for (Jugador j : partido.getEquipoLocal().getJugadores()) {
+                if (j.estaSuspendido()) j.cumplirSuspension();
+            }
+            for (Jugador j : partido.getEquipoVisitante().getJugadores()) {
+                if (j.estaSuspendido()) j.cumplirSuspension();
+            }
+
             JOptionPane.showMessageDialog(this, "✅ Resultado registrado.");
         } catch (Exception ex) {
             JOptionPane.showMessageDialog(this, "⚠ " + ex.getMessage());
+        }
+    }
+
+    private void registrarTarjetas() {
+        if (torneo.getPartidos() == null || torneo.getPartidos().isEmpty()) {
+            JOptionPane.showMessageDialog(this, "⚠ No hay partidos programados");
+            return;
+        }
+
+        List<Partido> jugados = new ArrayList<>();
+        for (Partido p : torneo.getPartidos()) {
+            if (p.getJugado()) jugados.add(p);
+        }
+
+        if (jugados.isEmpty()) {
+            JOptionPane.showMessageDialog(this, "⚠ Primero debe registrar resultados de partidos.");
+            return;
+        }
+
+        String[] listaPartidos = new String[jugados.size()];
+        for (int i = 0; i < jugados.size(); i++) {
+            Partido p = jugados.get(i);
+            listaPartidos[i] = p.getEquipoLocal().getNombre() + " vs " + p.getEquipoVisitante().getNombre() + " (" + p.getHora() + ")";
+        }
+
+        String seleccionado = (String) JOptionPane.showInputDialog(this, "Seleccione un partido:",
+                "Registrar Tarjetas", JOptionPane.QUESTION_MESSAGE, null, listaPartidos, listaPartidos[0]);
+        if (seleccionado == null) return;
+
+        Partido partido = null;
+        for (Partido p : jugados) {
+            String desc = p.getEquipoLocal().getNombre() + " vs " + p.getEquipoVisitante().getNombre() + " (" + p.getHora() + ")";
+            if (desc.equals(seleccionado)) {
+                partido = p;
+                break;
+            }
+        }
+        if (partido == null) return;
+
+        String[] equipos = { partido.getEquipoLocal().getNombre(), partido.getEquipoVisitante().getNombre() };
+        String eqSeleccionado = (String) JOptionPane.showInputDialog(this, "Seleccione equipo:",
+                "Equipo", JOptionPane.QUESTION_MESSAGE, null, equipos, equipos[0]);
+        if (eqSeleccionado == null) return;
+
+        Equipo equipo = eqSeleccionado.equals(partido.getEquipoLocal().getNombre()) ? partido.getEquipoLocal() : partido.getEquipoVisitante();
+
+        List<Jugador> jugadores = equipo.getJugadores();
+        String[] nombresJugadores = new String[jugadores.size()];
+        for (int i = 0; i < jugadores.size(); i++) {
+            nombresJugadores[i] = jugadores.get(i).getNombre() + " (#" + jugadores.get(i).getNumero() + ")";
+        }
+
+        String jugadorSel = (String) JOptionPane.showInputDialog(this, "Seleccione jugador:",
+                "Jugador", JOptionPane.QUESTION_MESSAGE, null, nombresJugadores, nombresJugadores[0]);
+        if (jugadorSel == null) return;
+
+        Jugador jugador = null;
+        for (Jugador j : jugadores) {
+            if (jugadorSel.contains(j.getNombre())) {
+                jugador = j;
+                break;
+            }
+        }
+        if (jugador == null) return;
+
+        String[] tipos = { "Amarilla", "Roja" };
+        String tipo = (String) JOptionPane.showInputDialog(this, "Seleccione tipo de tarjeta:",
+                "Tarjeta", JOptionPane.QUESTION_MESSAGE, null, tipos, tipos[0]);
+        if (tipo == null) return;
+
+        if (tipo.equals("Amarilla")) {
+            jugador.agregarTarjetaAmarilla();
+            JOptionPane.showMessageDialog(this, "🟨 " + jugador.getNombre() + " recibió una tarjeta amarilla.");
+        } else {
+            jugador.agregarTarjetaRoja();
+            JOptionPane.showMessageDialog(this, "🟥 " + jugador.getNombre() + " fue expulsado y queda suspendido.");
         }
     }
 
