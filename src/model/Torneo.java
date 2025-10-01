@@ -39,6 +39,11 @@ public class Torneo {
         return partidos;
     }
 
+    public boolean puedeIniciar() {
+    return equipos != null && equipos.size() >= 12;
+}
+
+
     public void agregarEquipo(Equipo equipo) {
         if (equipo == null || equipos.contains(equipo)) {
             throw new IllegalArgumentException("El equipo no puede ser nulo ni estar duplicado en el torneo");
@@ -225,4 +230,43 @@ public class Torneo {
 
         System.out.println("-------------------------------------------------\n");
     }
+
+    public List<List<Equipo>> crearGrupos() {
+    if (equipos == null || equipos.size() < 12) {
+        throw new IllegalStateException("Se necesitan mínimo 12 equipos para crear grupos.");
+    }
+
+    List<Equipo> copiaEquipos = new ArrayList<>(equipos);
+    Collections.shuffle(copiaEquipos); // Mezclar aleatoriamente
+
+    int totalEquipos = copiaEquipos.size();
+
+    // Determinar cantidad de grupos según los equipos
+    int grupos = totalEquipos / 4; // 12->3 grupos, 16->4 grupos, etc.
+
+    List<List<Equipo>> listaGrupos = new ArrayList<>();
+
+    for (int i = 0; i < grupos; i++) {
+        int inicio = i * 4;
+        int fin = inicio + 4;
+        List<Equipo> grupo = copiaEquipos.subList(inicio, fin);
+        listaGrupos.add(new ArrayList<>(grupo));
+    }
+
+    return listaGrupos;
+}
+
+public List<Equipo> clasificarPrimeros(List<List<Equipo>> grupos) {
+    List<Equipo> clasificados = new ArrayList<>();
+
+    for (List<Equipo> grupo : grupos) {
+        grupo.sort((a, b) -> b.getPuntos() - a.getPuntos()); // Ordenar de mayor a menor
+        clasificados.add(grupo.get(0));
+        clasificados.add(grupo.get(1));
+    }
+
+    return clasificados;
+}
+
+
 }

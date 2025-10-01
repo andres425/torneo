@@ -12,11 +12,12 @@ public class MainApp extends JFrame {
         torneo = new Torneo("Copa Intercolegial");
 
         setTitle("⚽ Sistema de Torneo de Fútbol");
-        setSize(650, 450);
+        setSize(650, 480);
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setLocationRelativeTo(null);
 
-        JPanel panel = new JPanel(new GridLayout(8, 1, 10, 10));
+        // ⬇️ Cambiado de 8 a 9 filas para agregar el nuevo botón
+        JPanel panel = new JPanel(new GridLayout(9, 1, 10, 10));
 
         JButton btnAgregarEquipo = new JButton("➕ Agregar Equipo");
         JButton btnAgregarJugador = new JButton("👤 Agregar Jugador a Equipo");
@@ -25,6 +26,7 @@ public class MainApp extends JFrame {
         JButton btnAgregarTarjeta = new JButton("🟨🟥 Agregar Tarjeta");
         JButton btnMostrarTabla = new JButton("📊 Mostrar Tabla de Posiciones");
         JButton btnMostrarPartidos = new JButton("📋 Mostrar Partidos");
+        JButton btnIniciarTorneo = new JButton("🏁 Iniciar Torneo"); // ✅ Nuevo
         JButton btnSalir = new JButton("❌ Salir");
 
         panel.add(btnAgregarEquipo);
@@ -34,6 +36,7 @@ public class MainApp extends JFrame {
         panel.add(btnAgregarTarjeta);
         panel.add(btnMostrarTabla);
         panel.add(btnMostrarPartidos);
+        panel.add(btnIniciarTorneo); // ✅ Agregado al panel
         panel.add(btnSalir);
 
         add(panel);
@@ -45,7 +48,29 @@ public class MainApp extends JFrame {
         btnAgregarTarjeta.addActionListener(e -> registrarTarjetas());
         btnMostrarTabla.addActionListener(e -> torneo.mostrarTablaPosiciones());
         btnMostrarPartidos.addActionListener(e -> torneo.mostrarPartidos());
+        btnIniciarTorneo.addActionListener(e -> iniciarTorneo()); // ✅ Listener agregado
         btnSalir.addActionListener(e -> System.exit(0));
+    }
+
+    // ✅ MÉTODO NUEVO
+    private void iniciarTorneo() {
+        if (!torneo.puedeIniciar()) {
+            JOptionPane.showMessageDialog(this,
+                    "⚠ Para iniciar el torneo debe haber al menos 12 equipos.");
+            return;
+        }
+
+        List<List<Equipo>> grupos = torneo.crearGrupos();
+
+        StringBuilder sb = new StringBuilder("✅ Grupos generados:\n\n");
+        for (int i = 0; i < grupos.size(); i++) {
+            sb.append("Grupo ").append(i + 1).append(":\n");
+            for (Equipo eq : grupos.get(i)) {
+                sb.append(" - ").append(eq.getNombre()).append("\n");
+            }
+            sb.append("\n");
+        }
+        JOptionPane.showMessageDialog(this, sb.toString());
     }
 
     // ---------------- Helpers ----------------
