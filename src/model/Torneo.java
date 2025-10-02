@@ -1,6 +1,10 @@
 package model;
 
+import java.time.DateTimeException;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.LocalTime;
+import java.time.YearMonth;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
@@ -12,6 +16,7 @@ public class Torneo {
     private String nombre;
     private List<Equipo> equipos;
     private List<Partido> partidos;
+    private List<List<Equipo>> grupos;
 
     public Torneo(String nombre) {
         setNombre(nombre);
@@ -40,9 +45,8 @@ public class Torneo {
     }
 
     public boolean puedeIniciar() {
-    return equipos != null && equipos.size() >= 12;
-}
-
+        return equipos != null && equipos.size() >= 12;
+    }
 
     public void agregarEquipo(Equipo equipo) {
         if (equipo == null || equipos.contains(equipo)) {
@@ -51,34 +55,15 @@ public class Torneo {
         equipos.add(equipo);
     }
 
-    public void programarPartido(Equipo equipoLocal, Equipo equipoVisitante, LocalTime hora) {
-        if (equipoLocal == null || equipoVisitante == null || hora == null ||
-                equipoLocal.equals(equipoVisitante) ||
-                !equipos.contains(equipoLocal) || !equipos.contains(equipoVisitante)) {
-            throw new IllegalArgumentException(
-                    "Partido inválido: equipos nulos, iguales o no registrados, o hora nula");
-        }
-
-        Partido partido = new Partido(equipoLocal, equipoVisitante, hora);
-
-        if (partidos.contains(partido)) {
-            throw new IllegalArgumentException("El partido ya está programado");
-        }
-
-        partidos.add(partido);
-    }
-
     public void mostrarTablaPosiciones() {
-        if (equipos.isEmpty()) {
-            JOptionPane.showMessageDialog(null, "⚠ No hay equipos en el torneo.");
+        if (grupos == null || grupos.isEmpty()) {
+            JOptionPane.showMessageDialog(null, "⚠ Primero debes crear los grupos y generar partidos.");
             return;
         }
 
-        StringBuilder sb = new StringBuilder("🏆 TABLA DE POSICIONES\n\n");
-        sb.append(String.format("%-15s %-5s %-5s %-5s %-5s %-5s\n",
-                "Equipo", "PJ", "GF", "GC", "DG", "Pts"));
+        StringBuilder sb = new StringBuilder("🏆 TABLA DE POSICIONES POR GRUPOS\n\n");
 
-        // aquí mantienes tu lógica para calcular la tabla
+        // Clase interna para estadísticas
         class Stats {
             Equipo equipo;
             int PJ = 0;
@@ -91,58 +76,73 @@ public class Torneo {
             }
         }
 
-        List<Stats> tabla = new ArrayList<>();
-        for (Equipo e : equipos) {
-            Stats st = new Stats();
-            st.equipo = e;
-            tabla.add(st);
-        }
+        int grupoIndex = 1;
+        for (List<Equipo> grupo : grupos) {
+            sb.append("=== Grupo ").append(grupoIndex).append(" ===\n");
+            sb.append(String.format("%-15s %-5s %-5s %-5s %-5s %-5s\n",
+                    "Equipo", "PJ", "GF", "GC", "DG", "Pts"));
 
-        for (Partido p : partidos) {
-            if (p.isJugado()) {
-                Stats local = null, visitante = null;
+            // Inicializar estadísticas para equipos del grupo
+            List<Stats> tabla = new ArrayList<>();
+            for (Equipo e : grupo) {
+                Stats st = new Stats();
+                st.equipo = e;
+                tabla.add(st);
+            }
 
-                for (Stats s : tabla) {
-                    if (s.equipo.equals(p.getEquipoLocal()))
-                        local = s;
-                    if (s.equipo.equals(p.getEquipoVisitante()))
-                        visitante = s;
-                }
+            // Procesar partidos del grupo
+            for (Partido p : partidos) {
+                if (grupo.contains(p.getEquipoLocal()) && grupo.contains(p.getEquipoVisitante()) && p.getJugado()) {
+                    Stats local = null, visitante = null;
 
-                if (local == null || visitante == null)
-                    continue;
+                    for (Stats s : tabla) {
+                        if (s.equipo.equals(p.getEquipoLocal()))
+                            local = s;
+                        if (s.equipo.equals(p.getEquipoVisitante()))
+                            visitante = s;
+                    }
 
-                local.PJ++;
-                visitante.PJ++;
+                    if (local == null || visitante == null)
+                        continue;
 
-                local.GF += p.getGolesLocal();
-                local.GC += p.getGolesVisitante();
+                    // Partidos jugados
+                    local.PJ++;
+                    visitante.PJ++;
 
-                visitante.GF += p.getGolesVisitante();
-                visitante.GC += p.getGolesLocal();
+                    // Goles
+                    local.GF += p.getGolesLocal();
+                    local.GC += p.getGolesVisitante();
 
-                if (p.ganoLocal()) {
-                    local.puntos += 3;
-                } else if (p.ganoVisitante()) {
-                    visitante.puntos += 3;
-                } else {
-                    local.puntos++;
-                    visitante.puntos++;
+                    visitante.GF += p.getGolesVisitante();
+                    visitante.GC += p.getGolesLocal();
+
+                    // Puntos
+                    if (p.ganoLocal()) {
+                        local.puntos += 3;
+                    } else if (p.ganoVisitante()) {
+                        visitante.puntos += 3;
+                    } else {
+                        local.puntos++;
+                        visitante.puntos++;
+                    }
                 }
             }
-        }
 
-        // ordenar
-        tabla.sort((a, b) -> {
-            if (b.puntos != a.puntos)
-                return Integer.compare(b.puntos, a.puntos);
-            return Integer.compare(b.getDG(), a.getDG());
-        });
+            // Ordenar tabla del grupo
+            tabla.sort((a, b) -> {
+                if (b.puntos != a.puntos)
+                    return Integer.compare(b.puntos, a.puntos);
+                return Integer.compare(b.getDG(), a.getDG());
+            });
 
-        // construir texto
-        for (Stats s : tabla) {
-            sb.append(String.format("%-15s %-5d %-5d %-5d %-5d %-5d\n",
-                    s.equipo.getNombre(), s.PJ, s.GF, s.GC, s.getDG(), s.puntos));
+            // Construir texto del grupo
+            for (Stats s : tabla) {
+                sb.append(String.format("%-15s %-5d %-5d %-5d %-5d %-5d\n",
+                        s.equipo.getNombre(), s.PJ, s.GF, s.GC, s.getDG(), s.puntos));
+            }
+
+            sb.append("\n");
+            grupoIndex++;
         }
 
         JOptionPane.showMessageDialog(null, sb.toString(), "Tabla de posiciones", JOptionPane.INFORMATION_MESSAGE);
@@ -155,16 +155,24 @@ public class Torneo {
         }
 
         StringBuilder sb = new StringBuilder("📅 LISTA DE PARTIDOS\n\n");
-        for (Partido p : partidos) {
-            String estado = p.isJugado() ? "✅ JUGADO" : "⌛ PENDIENTE";
-            String marcador = p.isJugado()
-                    ? p.getGolesLocal() + " - " + p.getGolesVisitante()
-                    : "vs";
+        int grupoIndex = 1;
+        for (List<Equipo> grupo : grupos) {
+            sb.append("=== Grupo ").append(grupoIndex).append(" ===\n");
+            for (Partido p : partidos) {
+                if (grupo.contains(p.getEquipoLocal()) && grupo.contains(p.getEquipoVisitante())) {
+                    String estado = p.getJugado() ? "✅ JUGADO" : "⌛ PENDIENTE";
+                    String marcador = p.getJugado()
+                            ? p.getGolesLocal() + " - " + p.getGolesVisitante()
+                            : "vs";
 
-            sb.append(p.getEquipoLocal().getNombre())
-                    .append(" ").append(marcador).append(" ")
-                    .append(p.getEquipoVisitante().getNombre())
-                    .append("   [").append(estado).append("]\n");
+                    sb.append(p.getEquipoLocal().getNombre())
+                            .append(" ").append(marcador).append(" ")
+                            .append(p.getEquipoVisitante().getNombre())
+                            .append("   [").append(estado).append("]\n");
+                }
+            }
+            sb.append("\n");
+            grupoIndex++;
         }
 
         JOptionPane.showMessageDialog(null, sb.toString(), "Partidos", JOptionPane.INFORMATION_MESSAGE);
@@ -179,16 +187,16 @@ public class Torneo {
 
     public void mostrarPartidosPendientes() {
         partidos.stream()
-                .filter(p -> !p.isJugado())
+                .filter(p -> !p.getJugado())
                 .forEach(p -> System.out.println(
                         p.getEquipoLocal().getNombre() + " vs " +
                                 p.getEquipoVisitante().getNombre() + " a las " +
-                                p.getHora()));
+                                p.getFechaHora()));
     }
 
     public void mostrarPartidosJugados() {
         partidos.stream()
-                .filter(Partido::isJugado)
+                .filter(Partido::getJugado)
                 .forEach(p -> System.out.println(p.resumen()));
     }
 
@@ -232,41 +240,388 @@ public class Torneo {
     }
 
     public List<List<Equipo>> crearGrupos() {
-    if (equipos == null || equipos.size() < 12) {
-        throw new IllegalStateException("Se necesitan mínimo 12 equipos para crear grupos.");
+        if (equipos == null || equipos.size() < 12) {
+            throw new IllegalStateException("⚠ Se necesitan mínimo 12 equipos para crear grupos.");
+        }
+
+        List<Equipo> copiaEquipos = new ArrayList<>(equipos);
+        Collections.shuffle(copiaEquipos); // barajar aleatoriamente
+
+        int totalEquipos = copiaEquipos.size();
+        int tamanioGrupo;
+
+        // Si es múltiplo de 4 → grupos de 4, sino de 3
+        if (totalEquipos % 4 == 0) {
+            tamanioGrupo = 4;
+        } else if (totalEquipos % 3 == 0) {
+            tamanioGrupo = 3;
+        } else {
+            throw new IllegalStateException("⚠ El número de equipos debe permitir grupos de 3 o de 4.");
+        }
+
+        int cantidadGrupos = totalEquipos / tamanioGrupo;
+        this.grupos = new ArrayList<>();
+
+        for (int i = 0; i < cantidadGrupos; i++) {
+            int inicio = i * tamanioGrupo;
+            int fin = inicio + tamanioGrupo;
+            List<Equipo> grupo = new ArrayList<>(copiaEquipos.subList(inicio, fin));
+            this.grupos.add(grupo);
+        }
+
+        JOptionPane.showMessageDialog(null,
+                "✅ Se crearon " + cantidadGrupos + " grupos de " + tamanioGrupo + " equipos.");
+
+        return this.grupos;
     }
 
-    List<Equipo> copiaEquipos = new ArrayList<>(equipos);
-    Collections.shuffle(copiaEquipos); // Mezclar aleatoriamente
+    public List<Equipo> clasificarPrimeros(List<List<Equipo>> grupos) {
+        List<Equipo> clasificados = new ArrayList<>();
 
-    int totalEquipos = copiaEquipos.size();
+        for (List<Equipo> grupo : grupos) {
+            grupo.sort((a, b) -> b.getPuntos() - a.getPuntos()); // Ordenar de mayor a menor
+            clasificados.add(grupo.get(0));
+            clasificados.add(grupo.get(1));
+        }
 
-    // Determinar cantidad de grupos según los equipos
-    int grupos = totalEquipos / 4; // 12->3 grupos, 16->4 grupos, etc.
-
-    List<List<Equipo>> listaGrupos = new ArrayList<>();
-
-    for (int i = 0; i < grupos; i++) {
-        int inicio = i * 4;
-        int fin = inicio + 4;
-        List<Equipo> grupo = copiaEquipos.subList(inicio, fin);
-        listaGrupos.add(new ArrayList<>(grupo));
+        return clasificados;
     }
 
-    return listaGrupos;
+    public Partido sortearPartido() {
+        if (equipos.size() < 2) {
+            throw new IllegalStateException("No hay suficientes equipos registrados para sortear un partido.");
+        }
+
+        Equipo local = equipos.get((int) (Math.random() * equipos.size()));
+        Equipo visitante;
+        do {
+            visitante = equipos.get((int) (Math.random() * equipos.size()));
+        } while (visitante.equals(local));
+
+        // Crear el partido sin fecha asignada (se programará después)
+        Partido partido = new Partido(local, visitante, null);
+        partidos.add(partido);
+        return partido;
+    }
+
+    public void generarPartidosDeGrupos() {
+        if (grupos == null || grupos.isEmpty()) {
+            throw new IllegalStateException("⚠ Primero debes crear los grupos (usa Iniciar Torneo).");
+        }
+
+        partidos.clear(); // limpiar partidos anteriores
+        int totalPartidos = 0;
+
+        for (List<Equipo> grupo : grupos) {
+            for (int i = 0; i < grupo.size(); i++) {
+                for (int j = i + 1; j < grupo.size(); j++) {
+                    Equipo local = grupo.get(i);
+                    Equipo visitante = grupo.get(j);
+
+                    Partido partido = new Partido(local, visitante, null);
+
+                    partidos.add(partido);
+                    totalPartidos++;
+                }
+            }
+        }
+
+        JOptionPane.showMessageDialog(null, "✅ Se generaron " + totalPartidos + " partidos de fase de grupos.");
+    }
+
+    private Integer pedirEnteroValido(String mensaje, int min, int max) {
+        while (true) {
+            String input = JOptionPane.showInputDialog(null, mensaje);
+            if (input == null)
+                return null; // Cancelar
+            try {
+                int valor = Integer.parseInt(input);
+                if (valor < min || valor > max) {
+                    JOptionPane.showMessageDialog(null, "⚠ El valor debe estar entre " + min + " y " + max);
+                } else {
+                    return valor;
+                }
+            } catch (NumberFormatException e) {
+                JOptionPane.showMessageDialog(null, "⚠ Ingrese un número válido.");
+            }
+        }
+    }
+
+   public void programarPartido() {
+    // Filtrar partidos pendientes (sin fecha)
+    List<Partido> partidosPendientes = new ArrayList<>();
+    for (Partido p : partidos) {
+        if (p.getFechaHora() == null)
+            partidosPendientes.add(p);
+    }
+
+    if (partidosPendientes.isEmpty()) {
+        JOptionPane.showMessageDialog(null, "⚠ No hay partidos pendientes de programar.");
+        return;
+    }
+
+    // Opciones para el menú desplegable
+    String[] opciones = new String[partidosPendientes.size()];
+    for (int i = 0; i < partidosPendientes.size(); i++) {
+        opciones[i] = partidosPendientes.get(i).getEquipoLocal().getNombre()
+                + " vs " + partidosPendientes.get(i).getEquipoVisitante().getNombre();
+    }
+
+    String seleccion = (String) JOptionPane.showInputDialog(null,
+            "Seleccione el partido a programar:",
+            "Programar Partido",
+            JOptionPane.QUESTION_MESSAGE,
+            null,
+            opciones,
+            opciones[0]);
+
+    if (seleccion == null)
+        return; // Canceló
+
+    // Encontrar el partido seleccionado
+    Partido partidoSeleccionado = null;
+    for (Partido p : partidosPendientes) {
+        String texto = p.getEquipoLocal().getNombre() + " vs " + p.getEquipoVisitante().getNombre();
+        if (texto.equals(seleccion)) {
+            partidoSeleccionado = p;
+            break;
+        }
+    }
+    if (partidoSeleccionado == null)
+        return; // por seguridad
+
+    // Bucle para pedir fecha/hora. Validaciones por campo:
+    LocalDateTime fechaPartido = null;
+
+    while (true) {
+        try {
+            LocalDate hoy = LocalDate.now();
+            int anio, mes, dia, hora, minuto;
+
+            // ✅ Año
+            while (true) {
+                anio = pedirEnteroValido("Ingrese el año del partido:", hoy.getYear(), 2100);
+                if (anio < hoy.getYear()) {
+                    JOptionPane.showMessageDialog(null, "⚠ El año no puede ser menor al actual.");
+                } else {
+                    break;
+                }
+            }
+
+            // ✅ Mes
+            while (true) {
+                mes = pedirEnteroValido("Ingrese el mes (1-12):", 1, 12);
+                if (anio == hoy.getYear() && mes < hoy.getMonthValue()) {
+                    JOptionPane.showMessageDialog(null,
+                            "⚠ El mes no puede ser menor al mes actual (" + hoy.getMonthValue() + ").");
+                } else {
+                    break;
+                }
+            }
+
+            // ✅ Día
+            while (true) {
+                int maxDia = YearMonth.of(anio, mes).lengthOfMonth();
+                dia = pedirEnteroValido("Ingrese el día (1-" + maxDia + "):", 1, maxDia);
+                if (anio == hoy.getYear() && mes == hoy.getMonthValue() && dia < hoy.getDayOfMonth()) {
+                    JOptionPane.showMessageDialog(null,
+                            "⚠ El día no puede ser menor al día actual (" + hoy.getDayOfMonth() + ").");
+                } else {
+                    break;
+                }
+            }
+
+            // ✅ Hora
+            while (true) {
+                hora = pedirEnteroValido("Ingrese la hora (0-23):", 0, 23);
+                if (anio == hoy.getYear() && mes == hoy.getMonthValue() && dia == hoy.getDayOfMonth() &&
+                        hora < LocalTime.now().getHour()) {
+                    JOptionPane.showMessageDialog(null,
+                            "⚠ La hora no puede ser menor a la actual (" + LocalTime.now().getHour() + ").");
+                } else {
+                    break;
+                }
+            }
+
+            // ✅ Minuto
+            while (true) {
+                minuto = pedirEnteroValido("Ingrese los minutos (0-59):", 0, 59);
+                if (anio == hoy.getYear() && mes == hoy.getMonthValue() && dia == hoy.getDayOfMonth() &&
+                        hora == LocalTime.now().getHour() && minuto <= LocalTime.now().getMinute()) {
+                    JOptionPane.showMessageDialog(null,
+                            "⚠ Los minutos deben ser mayores a los actuales (" + LocalTime.now().getMinute() + ").");
+                } else {
+                    break;
+                }
+            }
+
+            // ✅ Construir fecha
+            fechaPartido = LocalDateTime.of(anio, mes, dia, hora, minuto);
+
+            // Asignar al partido seleccionado
+            partidoSeleccionado.setFechaHora(fechaPartido);
+
+            // Mostrar confirmación
+            JOptionPane.showMessageDialog(null,
+                    "✅ Partido programado con éxito:\n" +
+                    partidoSeleccionado.getEquipoLocal().getNombre() + " vs " +
+                    partidoSeleccionado.getEquipoVisitante().getNombre() + "\n" +
+                    "📅 Fecha: " + fechaPartido);
+
+            break; // salir del bucle
+
+        } catch (Exception ex) {
+            JOptionPane.showMessageDialog(null, "⚠ Fecha inválida. Inténtelo nuevamente.");
+        }
+    }
 }
 
-public List<Equipo> clasificarPrimeros(List<List<Equipo>> grupos) {
-    List<Equipo> clasificados = new ArrayList<>();
-
-    for (List<Equipo> grupo : grupos) {
-        grupo.sort((a, b) -> b.getPuntos() - a.getPuntos()); // Ordenar de mayor a menor
-        clasificados.add(grupo.get(0));
-        clasificados.add(grupo.get(1));
+public void registrarResultado() {
+    if (partidos == null || partidos.isEmpty()) {
+        JOptionPane.showMessageDialog(null, "⚠ No hay partidos programados");
+        return;
     }
 
-    return clasificados;
+    // Filtrar solo partidos no jugados y con fecha ya cumplida
+    List<Partido> pendientes = new ArrayList<>();
+    for (Partido p : partidos) {
+        if (!p.getJugado() && p.getFechaHora() != null && p.getFechaHora().isBefore(LocalDateTime.now())) {
+            pendientes.add(p);
+        }
+    }
+
+    if (pendientes.isEmpty()) {
+        JOptionPane.showMessageDialog(null, "⚠ No hay partidos pendientes o aún no se ha llegado a la fecha.");
+        return;
+    }
+
+    // Seleccionar partido
+    Partido partido = (Partido) JOptionPane.showInputDialog(
+            null,
+            "Seleccione el partido",
+            "Registrar Resultado",
+            JOptionPane.QUESTION_MESSAGE,
+            null,
+            pendientes.toArray(),
+            pendientes.get(0)
+    );
+
+    if (partido == null) return;
+
+    // Goles equipo local
+    int golesLocal = Integer.parseInt(JOptionPane.showInputDialog("⚽ Goles del equipo " + partido.getEquipoLocal().getNombre()));
+    partido.setGolesLocal(golesLocal);
+
+    for (int i = 0; i < golesLocal; i++) {
+        Jugador jugador = (Jugador) JOptionPane.showInputDialog(
+                null,
+                "¿Quién hizo el gol " + (i + 1) + "?",
+                "Goles " + partido.getEquipoLocal().getNombre(),
+                JOptionPane.QUESTION_MESSAGE,
+                null,
+                partido.getEquipoLocal().getJugadores().toArray(),
+                partido.getEquipoLocal().getJugadores().get(0)
+        );
+        if (jugador != null) {
+            partido.agregarGol(partido.getEquipoLocal(), jugador);
+        }
+    }
+
+    // Goles equipo visitante
+    int golesVisitante = Integer.parseInt(JOptionPane.showInputDialog("⚽ Goles del equipo " + partido.getEquipoVisitante().getNombre()));
+    partido.setGolesVisitante(golesVisitante);
+
+    for (int i = 0; i < golesVisitante; i++) {
+        Jugador jugador = (Jugador) JOptionPane.showInputDialog(
+                null,
+                "¿Quién hizo el gol " + (i + 1) + "?",
+                "Goles " + partido.getEquipoVisitante().getNombre(),
+                JOptionPane.QUESTION_MESSAGE,
+                null,
+                partido.getEquipoVisitante().getJugadores().toArray(),
+                partido.getEquipoVisitante().getJugadores().get(0)
+        );
+        if (jugador != null) {
+            partido.agregarGol(partido.getEquipoVisitante(), jugador);
+        }
+    }
+
+    // --- Tarjetas Equipo Local ---
+    int tarjetasLocal = JOptionPane.showConfirmDialog(null,
+            "¿Hubo tarjetas para el equipo " + partido.getEquipoLocal().getNombre() + "?",
+            "Tarjetas", JOptionPane.YES_NO_OPTION);
+
+    if (tarjetasLocal == JOptionPane.YES_OPTION) {
+        int cantTarjetas = Integer.parseInt(JOptionPane.showInputDialog("¿Cuántas tarjetas recibió el equipo " + partido.getEquipoLocal().getNombre() + "?"));
+        for (int i = 0; i < cantTarjetas; i++) {
+            Jugador jugador = (Jugador) JOptionPane.showInputDialog(
+                    null,
+                    "¿Qué jugador recibió la tarjeta " + (i + 1) + "?",
+                    "Tarjetas " + partido.getEquipoLocal().getNombre(),
+                    JOptionPane.QUESTION_MESSAGE,
+                    null,
+                    partido.getEquipoLocal().getJugadores().toArray(),
+                    partido.getEquipoLocal().getJugadores().get(0)
+            );
+
+            String tipo = (String) JOptionPane.showInputDialog(
+                    null,
+                    "¿Qué tipo de tarjeta?",
+                    "Tipo de Tarjeta",
+                    JOptionPane.QUESTION_MESSAGE,
+                    null,
+                    new String[]{"Amarilla", "Roja"},
+                    "Amarilla"
+            );
+
+            if (jugador != null && tipo != null) {
+                partido.agregarTarjeta(partido.getEquipoLocal(), jugador, tipo);
+            }
+        }
+    }
+
+    // --- Tarjetas Equipo Visitante ---
+    int tarjetasVisitante = JOptionPane.showConfirmDialog(null,
+            "¿Hubo tarjetas para el equipo " + partido.getEquipoVisitante().getNombre() + "?",
+            "Tarjetas", JOptionPane.YES_NO_OPTION);
+
+    if (tarjetasVisitante == JOptionPane.YES_OPTION) {
+        int cantTarjetas = Integer.parseInt(JOptionPane.showInputDialog("¿Cuántas tarjetas recibió el equipo " + partido.getEquipoVisitante().getNombre() + "?"));
+        for (int i = 0; i < cantTarjetas; i++) {
+            Jugador jugador = (Jugador) JOptionPane.showInputDialog(
+                    null,
+                    "¿Qué jugador recibió la tarjeta " + (i + 1) + "?",
+                    "Tarjetas " + partido.getEquipoVisitante().getNombre(),
+                    JOptionPane.QUESTION_MESSAGE,
+                    null,
+                    partido.getEquipoVisitante().getJugadores().toArray(),
+                    partido.getEquipoVisitante().getJugadores().get(0)
+            );
+
+            String tipo = (String) JOptionPane.showInputDialog(
+                    null,
+                    "¿Qué tipo de tarjeta?",
+                    "Tipo de Tarjeta",
+                    JOptionPane.QUESTION_MESSAGE,
+                    null,
+                    new String[]{"Amarilla", "Roja"},
+                    "Amarilla"
+            );
+
+            if (jugador != null && tipo != null) {
+                partido.agregarTarjeta(partido.getEquipoVisitante(), jugador, tipo);
+            }
+        }
+    }
+
+    partido.setJugado(true);
+    JOptionPane.showMessageDialog(null, "✅ Resultado y tarjetas registradas con éxito.");
 }
+
+
+
+
+
 
 
 }

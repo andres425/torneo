@@ -100,12 +100,9 @@ public class Jugador {
     public int getTarjetasAmarillas() { return tarjetasAmarillas; }
     public int getTarjetasRojas() { return tarjetasRojas; }
 
-    @Override
-    public String toString() {
-        return "Nombre: " + nombre + ", Edad: " + edad +
-                ", Posición: " + posicion + ", Número: " + numero +
-                ", Goles: " + goles + ", Amarillas: " + tarjetasAmarillas +
-                ", Rojas: " + tarjetasRojas +
-                (suspendido ? " (SUSPENDIDO)" : "");
-    }
+   
+   @Override
+public String toString() {
+    return nombre + " (#" + numero + ")";
+}
 }
