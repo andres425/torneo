@@ -29,7 +29,7 @@ public class MainApp extends JFrame {
         JButton btnMostrarTabla = new JButton("📊 Mostrar Tabla de Posiciones");
         JButton btnMostrarPartidos = new JButton("📋 Mostrar Partidos");
         JButton btnCrearGrupos = new JButton("🏁 Crear Grupos"); 
-        JButton btnIniciarPartido = new JButton("⚽ Iniciar Sorteo");
+        JButton btnIniciarSorteo = new JButton("⚽ Iniciar Sorteo");
         JButton btnSalir = new JButton("❌ Salir");
 
         panel.add(btnAgregarEquipo);
@@ -40,7 +40,7 @@ public class MainApp extends JFrame {
         panel.add(btnMostrarTabla);
         panel.add(btnMostrarPartidos);
         panel.add(btnCrearGrupos);
-         panel.add(btnIniciarPartido);  
+         panel.add(btnIniciarSorteo);  
         panel.add(btnSalir);
 
         add(panel);
@@ -50,11 +50,10 @@ public class MainApp extends JFrame {
         btnAgregarJugador.addActionListener(e -> agregarJugador());
         btnProgramarPartido.addActionListener(e -> torneo.programarPartido());
         btnRegistrarResultado.addActionListener(e -> torneo.registrarResultado());
-        
         btnMostrarTabla.addActionListener(e -> torneo.mostrarTablaPosiciones());
         btnMostrarPartidos.addActionListener(e -> torneo.mostrarPartidos());
         btnCrearGrupos.addActionListener(e -> torneo.crearGrupos()); 
-        btnIniciarPartido.addActionListener(e -> torneo.generarPartidosDeGrupos());
+        btnIniciarSorteo.addActionListener(e -> torneo.generarPartidosDeGrupos());
         btnSalir.addActionListener(e -> System.exit(0));
 
     }
