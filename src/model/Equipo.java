@@ -3,6 +3,8 @@ package model;
 import java.util.ArrayList;
 import java.util.List;
 
+import javax.swing.JOptionPane;
+
 public class Equipo {
     private String nombre;
     private List<Jugador> jugadores;
@@ -61,7 +63,7 @@ public class Equipo {
         if (golesFavor >= 0) {
             this.golesFavor = golesFavor;
         } else {
-             throw new IllegalArgumentException("Los goles a favor deben ser mayor o igual a 0");
+            throw new IllegalArgumentException("Los goles a favor deben ser mayor o igual a 0");
         }
     }
 
@@ -77,24 +79,67 @@ public class Equipo {
         }
     }
 
-    public void agregarJugador(Jugador jugador) {
-        if (jugador == null) {
-            throw new IllegalArgumentException("El jugador no puede ser null");
+  
+public void agregarJugador() {
+        if (jugadores.size() >= 12) {
+            JOptionPane.showMessageDialog(null,
+                "⚠ El equipo " + nombre + " ya tiene el máximo de 12 jugadores.");
+            return;
         }
+
+        String nombreJugador = JOptionPane.showInputDialog("Nombre del jugador:");
+        if (nombreJugador == null || nombreJugador.trim().isEmpty()) return;
+
+        int edad = Integer.parseInt(JOptionPane.showInputDialog("Edad del jugador (15-50):"));
+
+        Posicion[] posiciones = Posicion.values();
+        Posicion posicion = (Posicion) JOptionPane.showInputDialog(
+                null,
+                "Posición del jugador:",
+                "Posición",
+                JOptionPane.QUESTION_MESSAGE,
+                null,
+                posiciones,
+                posiciones[0]
+        );
+
+        int numero;
+        while (true) {
+            numero = Integer.parseInt(JOptionPane.showInputDialog("Número del jugador (1-99):"));
+            int finalNumero = numero;
+            boolean repetido = jugadores.stream().anyMatch(j -> j.getNumero() == finalNumero);
+            if (repetido) {
+                JOptionPane.showMessageDialog(null, "⚠ Ese número ya está en uso en el equipo.");
+            } else {
+                break;
+            }
+        }
+
+        Jugador jugador = new Jugador(nombreJugador, edad, posicion, numero);
         jugadores.add(jugador);
+
+        JOptionPane.showMessageDialog(null,
+            "✅ Jugador agregado al equipo " + nombre +
+            ". Ahora tiene " + jugadores.size() + " jugadores.");
     }
 
- public void mostrarJugadores() {
-    if (jugadores == null || jugadores.isEmpty()) {
-        System.out.println("El equipo no tiene jugadores registrados.");
-    } else {
-        for (Jugador j : jugadores) {
-            System.out.println(j); 
+
+
+
+    public void mostrarJugadores() {
+        if (jugadores == null || jugadores.isEmpty()) {
+            System.out.println("El equipo no tiene jugadores registrados.");
+        } else {
+            for (Jugador j : jugadores) {
+                System.out.println(j);
+            }
         }
     }
+    @Override
+public String toString() {
+    return nombre;  
 }
 
 
-
-
 }
+

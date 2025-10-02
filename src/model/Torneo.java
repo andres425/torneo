@@ -53,10 +53,54 @@ public class Torneo {
     }
 
     public void agregarEquipo(Equipo equipo) {
-        if (equipo == null || equipos.contains(equipo)) {
-            throw new IllegalArgumentException("El equipo no puede ser nulo ni estar duplicado en el torneo");
+        if (equipo == null) {
+            throw new IllegalArgumentException("El equipo no puede ser nulo.");
+        }
+        if (equipos.contains(equipo)) {
+            throw new IllegalStateException("El equipo ya está registrado.");
         }
         equipos.add(equipo);
+    }
+
+
+ 
+    public void agregarJugadorEquipo() {
+        if (equipos.isEmpty()) {
+            JOptionPane.showMessageDialog(null, "⚠ No hay equipos registrados.");
+            return;
+        }
+
+        // Mostrar lista de equipos
+        Equipo equipoSeleccionado = (Equipo) JOptionPane.showInputDialog(
+                null,
+                "Seleccione el equipo:",
+                "Agregar Jugador",
+                JOptionPane.QUESTION_MESSAGE,
+                null,
+                equipos.toArray(),
+                equipos.get(0)
+        );
+
+        if (equipoSeleccionado == null) return;
+
+        // Preguntar cuántos jugadores
+        int cantidad = Integer.parseInt(JOptionPane.showInputDialog("¿Cuántos jugadores desea agregar?"));
+
+        for (int i = 0; i < cantidad; i++) {
+            if (equipoSeleccionado.getJugadores().size() >= 12) {
+                JOptionPane.showMessageDialog(null,
+                        "⚠ El equipo " + equipoSeleccionado.getNombre() +
+                        " ya tiene el máximo de 12 jugadores.");
+                break;
+            }
+            equipoSeleccionado.agregarJugador();
+        }
+
+        if (equipoSeleccionado.getJugadores().size() < 8) {
+            JOptionPane.showMessageDialog(null,
+                    "⚠ El equipo " + equipoSeleccionado.getNombre() +
+                    " debe tener al menos 8 jugadores para participar.");
+        }
     }
 
     public void mostrarTablaPosiciones() {

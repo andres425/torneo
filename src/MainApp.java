@@ -28,7 +28,7 @@ public class MainApp extends JFrame {
         JButton btnAgregarTarjeta = new JButton("🟨🟥 Agregar Tarjeta");
         JButton btnMostrarTabla = new JButton("📊 Mostrar Tabla de Posiciones");
         JButton btnMostrarPartidos = new JButton("📋 Mostrar Partidos");
-        JButton btnCrearGrupos = new JButton("🏁 Crear Grupos"); 
+        JButton btnCrearGrupos = new JButton("🏁 Crear Grupos");
         JButton btnIniciarSorteo = new JButton("⚽ Iniciar Sorteo");
         JButton btnSalir = new JButton("❌ Salir");
 
@@ -40,19 +40,18 @@ public class MainApp extends JFrame {
         panel.add(btnMostrarTabla);
         panel.add(btnMostrarPartidos);
         panel.add(btnCrearGrupos);
-         panel.add(btnIniciarSorteo);  
+        panel.add(btnIniciarSorteo);
         panel.add(btnSalir);
 
         add(panel);
-        
 
         btnAgregarEquipo.addActionListener(e -> agregarEquipo());
-        btnAgregarJugador.addActionListener(e -> agregarJugador());
+        btnAgregarJugador.addActionListener(e -> torneo.agregarJugadorEquipo());
         btnProgramarPartido.addActionListener(e -> torneo.programarPartido());
         btnRegistrarResultado.addActionListener(e -> torneo.registrarResultado());
         btnMostrarTabla.addActionListener(e -> torneo.mostrarTablaPosiciones());
         btnMostrarPartidos.addActionListener(e -> torneo.mostrarPartidos());
-        btnCrearGrupos.addActionListener(e -> torneo.crearGrupos()); 
+        btnCrearGrupos.addActionListener(e -> torneo.crearGrupos());
         btnIniciarSorteo.addActionListener(e -> torneo.generarPartidosDeGrupos());
         btnSalir.addActionListener(e -> System.exit(0));
 
@@ -123,92 +122,6 @@ public class MainApp extends JFrame {
             JOptionPane.showMessageDialog(this, "⚠ " + ex.getMessage());
         }
     }
-
-    private void agregarJugador() {
-        if (torneo.getEquipos().isEmpty()) {
-            JOptionPane.showMessageDialog(this, "⚠ Primero debe registrar un equipo");
-            return;
-        }
-
-        List<Equipo> listaEquipos = torneo.getEquipos();
-        String[] nombresEquipos = new String[listaEquipos.size()];
-        for (int i = 0; i < listaEquipos.size(); i++) {
-            nombresEquipos[i] = listaEquipos.get(i).getNombre();
-        }
-
-        String seleccionado = (String) JOptionPane.showInputDialog(this, "Seleccione equipo:",
-                "Agregar Jugador", JOptionPane.QUESTION_MESSAGE, null, nombresEquipos, nombresEquipos[0]);
-        if (seleccionado == null)
-            return;
-
-        Equipo equipo = null;
-        for (Equipo e : listaEquipos) {
-            if (e.getNombre().equals(seleccionado)) {
-                equipo = e;
-                break;
-            }
-        }
-        if (equipo == null)
-            return;
-
-        Integer cantidad = pedirEnteroValido("¿Cuántos jugadores desea agregar? (1-30)", 1, 30);
-        if (cantidad == null)
-            return;
-
-        for (int i = 1; i <= cantidad; i++) {
-            String nombre = pedirTextoValido("Nombre del jugador " + i + ":");
-            if (nombre == null)
-                return;
-
-            Integer edad = pedirEnteroValido("Edad del jugador " + nombre + " (15-50):", 15, 50);
-            if (edad == null)
-                return;
-
-            // 🔹 Selección de posición con JComboBox usando el enum
-            Posicion[] opciones = Posicion.values();
-            Posicion posicion = (Posicion) JOptionPane.showInputDialog(
-                    this,
-                    "Seleccione la posición del jugador " + nombre + ":",
-                    "Posición",
-                    JOptionPane.QUESTION_MESSAGE,
-                    null,
-                    opciones,
-                    opciones[0]);
-            if (posicion == null)
-                return;
-
-            Integer numero;
-            while (true) {
-                numero = pedirEnteroValido("Número del jugador " + nombre + " (1-99):", 1, 99);
-                if (numero == null)
-                    return;
-
-                boolean repetido = false;
-                for (Jugador j : equipo.getJugadores()) {
-                    if (j.getNumero() == numero) {
-                        repetido = true;
-                        break;
-                    }
-                }
-                if (repetido) {
-                    JOptionPane.showMessageDialog(this, "Ese número ya está en uso en el equipo. Elija otro.");
-                    continue;
-                }
-                break;
-            }
-
-            try {
-                Jugador jugador = new Jugador(nombre, edad, posicion, numero);
-                equipo.agregarJugador(jugador);
-            } catch (Exception ex) {
-                JOptionPane.showMessageDialog(this, "Error al crear el jugador: " + ex.getMessage());
-                i--;
-            }
-        }
-
-        JOptionPane.showMessageDialog(this,
-                "✅ Se agregaron " + cantidad + " jugadores al equipo " + equipo.getNombre());
-    } 
 
     public static void main(String[] args) {
         SwingUtilities.invokeLater(() -> new MainApp().setVisible(true));

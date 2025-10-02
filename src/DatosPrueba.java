@@ -48,7 +48,8 @@ public class DatosPrueba {
                 } while (repetido);
 
                 Jugador jugador = new Jugador(nombre, edad, posicion, numero);
-                equipo.agregarJugador(jugador);
+               equipo.getJugadores().add(jugador);
+
             }
 
             torneo.agregarEquipo(equipo);
