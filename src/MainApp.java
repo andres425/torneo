@@ -1,19 +1,14 @@
 import model.*;
 import javax.swing.*;
 import java.awt.*;
-import java.util.List;
-
-import model.Torneo;
-import model.Equipo;
-import model.Jugador;
-import model.Posicion;
-
 
 public class MainApp extends JFrame {
     private Torneo torneo;
+    private Eliminatoria eliminatoria;
 
     public MainApp() {
         torneo = new Torneo("Copa Intercolegial");
+        eliminatoria = new Eliminatoria();
         boolean modoPrueba = true;
         if (modoPrueba) {
             DatosPrueba.cargar(torneo);
@@ -36,6 +31,7 @@ public class MainApp extends JFrame {
         JButton btnMostrarPartidos = new JButton("📋 Mostrar Partidos");
         JButton btnCrearGrupos = new JButton("🏁 Crear Grupos");
         JButton btnIniciarSorteo = new JButton("⚽ Iniciar Sorteo");
+        JButton btnVerCuadro = new JButton("ver cuadro");
         JButton btnSalir = new JButton("❌ Salir");
 
         panel.add(btnAgregarEquipo);
@@ -47,24 +43,26 @@ public class MainApp extends JFrame {
         panel.add(btnMostrarPartidos);
         panel.add(btnCrearGrupos);
         panel.add(btnIniciarSorteo);
+        panel.add(btnVerCuadro);
         panel.add(btnSalir);
-
         add(panel);
 
         btnAgregarEquipo.addActionListener(e -> torneo.agregarEquipo());
         btnAgregarJugador.addActionListener(e -> torneo.agregarJugadorEquipo());
-        btnProgramarPartido.addActionListener(e -> torneo.programarPartido());
-        btnRegistrarResultado.addActionListener(e -> torneo.registrarResultado());
-        btnTablaGoleadores.addActionListener(e-> torneo.mostrarGoleadores());
+        btnProgramarPartido.addActionListener(e -> torneo.programarPartido(eliminatoria));
+        btnRegistrarResultado.addActionListener(e -> torneo.registrarResultado(eliminatoria));
+        btnTablaGoleadores.addActionListener(e -> torneo.mostrarGoleadores(eliminatoria));
         btnMostrarTabla.addActionListener(e -> torneo.mostrarTablaPosiciones());
-        btnMostrarPartidos.addActionListener(e -> torneo.mostrarPartidos());
+        btnMostrarPartidos.addActionListener(e -> torneo.mostrarPartidos(eliminatoria));
         btnCrearGrupos.addActionListener(e -> torneo.crearGrupos());
         btnIniciarSorteo.addActionListener(e -> torneo.generarPartidosDeGrupos());
+        btnVerCuadro.addActionListener(e -> eliminatoria.mostrarEliminatoria());
         btnSalir.addActionListener(e -> System.exit(0));
 
     }
-
+     
     public static void main(String[] args) {
         SwingUtilities.invokeLater(() -> new MainApp().setVisible(true));
+
     }
 }

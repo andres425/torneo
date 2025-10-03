@@ -10,8 +10,12 @@ public class Partido {
     private int golesVisitante;
     private boolean jugado;
     private LocalDateTime fechaHora;
-    private Map<Jugador, Integer> goleadores = new HashMap<>();
+    private final Map<String, Integer> golesPorJugador = new HashMap<>();
+
     private List<String> eventos = new ArrayList<>();
+    private Integer penalesLocal;
+private Integer penalesVisitante;
+private Equipo ganadorPorPenales;
 
     public Partido(Equipo equipoLocal, Equipo equipoVisitante, LocalDateTime fechaHora) {
         this.equipoLocal = Objects.requireNonNull(equipoLocal, "El equipo local no puede ser nulo");
@@ -40,44 +44,45 @@ public class Partido {
         return equipoLocal;
     }
 
-    public void setEquipoLocal(Equipo equipoLocal){
-        this.equipoLocal=equipoLocal;
+    public void setEquipoLocal(Equipo equipoLocal) {
+        this.equipoLocal = equipoLocal;
     }
 
     public Equipo getEquipoVisitante() {
         return equipoVisitante;
     }
-    public void setEquipoVisitante(Equipo equipoVisitante){
-        this.equipoVisitante=equipoVisitante;
+
+    public void setEquipoVisitante(Equipo equipoVisitante) {
+        this.equipoVisitante = equipoVisitante;
     }
 
     public int getGolesLocal() {
         return golesLocal;
     }
 
-    public void setGolesLocal(int golesLocal){
-        this.golesLocal=golesLocal;
+    public void setGolesLocal(int golesLocal) {
+        this.golesLocal = golesLocal;
     }
 
     public int getGolesVisitante() {
         return golesVisitante;
     }
 
-    public void setGolesVisitante(int golesVisitante){
-        this.golesVisitante=golesVisitante;
+    public void setGolesVisitante(int golesVisitante) {
+        this.golesVisitante = golesVisitante;
     }
 
     public boolean getJugado() {
         return jugado;
     }
 
-    public void setJugado(boolean jugado){
-        this.jugado=jugado;
+    public void setJugado(boolean jugado) {
+        this.jugado = jugado;
     }
 
-    public Map<Jugador, Integer> getGoleadores() {
-        return goleadores;
-    }
+  public Map<String, Integer> getGolesPorJugador() {
+    return Collections.unmodifiableMap(golesPorJugador);
+}
 
     public List<String> getEventos() {
         return eventos;
@@ -95,6 +100,11 @@ public class Partido {
     public boolean esEmpate() {
         return jugado && golesLocal == golesVisitante;
     }
+    public void setResultadoPenales(int penalesLocal, int penalesVisitante, Equipo ganador) {
+    this.penalesLocal = penalesLocal;
+    this.penalesVisitante = penalesVisitante;
+    this.ganadorPorPenales = ganador;
+}
 
     public void registrarResultados(int golesLocal, int golesVisitante) {
         if (golesLocal < 0 || golesVisitante < 0) {
@@ -106,24 +116,26 @@ public class Partido {
     }
 
     // Registro de eventos
-    public void agregarGol(Equipo equipo, Jugador jugador) {
-    if (equipo.equals(equipoLocal)) {
-        golesLocal++;
-    } else if (equipo.equals(equipoVisitante)) {
-        golesVisitante++;
-    } else {
-        throw new IllegalArgumentException("El jugador no pertenece a ninguno de los equipos del partido");
+public void agregarGol(Equipo equipo, Jugador jugador) {
+    if (jugador == null) {
+        throw new IllegalArgumentException("⚠ El jugador recibido es null, no se puede registrar el gol.");
     }
 
-    // Llamamos al método de Jugador
-    jugador.anotarGol();
+    // incrementar contador en el objeto jugador (si usas las mismas instancias esto mantiene j.getGoles())
+    jugador.setGoles(jugador.getGoles() + 1);
 
-    // Actualizar mapa de goleadores
-    goleadores.put(jugador, goleadores.getOrDefault(jugador, 0) + 1);
+    if (equipo == equipoLocal) {
+        golesLocal++;
+    } else if (equipo == equipoVisitante) {
+        golesVisitante++;
+    }
 
-    // Evento
-    eventos.add("⚽ Gol de " + jugador.getNombre() + " (" + equipo.getNombre() + ")");
+    // Registrar también por partido (clave -> Jugador|Equipo)
+    String clave = jugador.getNombre() + "||" + (equipo != null ? equipo.getNombre() : "Desconocido");
+    golesPorJugador.put(clave, golesPorJugador.getOrDefault(clave, 0) + 1);
 }
+
+
 
     public void agregarTarjeta(Equipo equipo, Jugador jugador, String tipo) {
         if (!equipo.equals(equipoLocal) && !equipo.equals(equipoVisitante)) {
@@ -158,8 +170,10 @@ public class Partido {
 
     @Override
     public boolean equals(Object o) {
-        if (this == o) return true;
-        if (!(o instanceof Partido)) return false;
+        if (this == o)
+            return true;
+        if (!(o instanceof Partido))
+            return false;
         Partido partido = (Partido) o;
         return Objects.equals(equipoLocal, partido.equipoLocal) &&
                 Objects.equals(equipoVisitante, partido.equipoVisitante) &&
@@ -170,4 +184,5 @@ public class Partido {
     public int hashCode() {
         return Objects.hash(equipoLocal, equipoVisitante, fechaHora);
     }
+
 }

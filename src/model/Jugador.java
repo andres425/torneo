@@ -12,11 +12,11 @@ public class Jugador {
     private int tarjetasRojas;
     private boolean suspendido;
     
+    
     public Jugador(String nombre, int edad, String posicion, int numero) {
     this(nombre, edad, Posicion.valueOf(posicion.toUpperCase()), numero);
 }
-
-
+ 
     public Jugador(String nombre, int edad, Posicion posicion, int numero) {
         setNombre(nombre);
         setEdad(edad);
