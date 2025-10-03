@@ -52,7 +52,7 @@ public class DatosPrueba {
 
             }
 
-            torneo.agregarEquipo(equipo);
+            torneo.getEquipos().add(equipo);
         }
 
         System.out.println("✅ Datos de prueba cargados: 10 equipos con 10 jugadores cada uno.");

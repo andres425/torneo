@@ -11,6 +11,8 @@ import java.util.Comparator;
 import java.util.List;
 
 import javax.swing.JOptionPane;
+import javax.swing.JScrollPane;
+import javax.swing.JTextArea;
 
 public class Torneo {
     private String nombre;
@@ -52,18 +54,45 @@ public class Torneo {
         return equipos != null && equipos.size() >= 12;
     }
 
-    public void agregarEquipo(Equipo equipo) {
-        if (equipo == null) {
-            throw new IllegalArgumentException("El equipo no puede ser nulo.");
+    // metodo para agregar equipos
+    public void agregarEquipo() {
+        while (true) {
+            String nombre = JOptionPane.showInputDialog(null, "Ingrese el nombre del equipo:");
+            if (nombre == null) {
+                int resp = JOptionPane.showConfirmDialog(null, "¿Desea cancelar la operación?", "Confirmar",
+                        JOptionPane.YES_NO_OPTION);
+                if (resp == JOptionPane.YES_OPTION)
+                    return; // cancelar
+                else
+                    continue; // volver a pedir
+            }
+
+            nombre = nombre.trim();
+
+            if (nombre.isEmpty()) {
+                JOptionPane.showMessageDialog(null, "⚠ El campo no puede estar vacío. Intente de nuevo.");
+                continue;
+            }
+
+            if (!nombre.matches("[a-zA-ZáéíóúÁÉÍÓÚñÑ ]+")) {
+                JOptionPane.showMessageDialog(null, "⚠ Solo se permiten letras y espacios. Intente de nuevo.");
+                continue;
+            }
+
+            for (Equipo e : equipos) {
+                if (e.getNombre().equalsIgnoreCase(nombre)) {
+                    JOptionPane.showMessageDialog(null, "⚠ Ya existe un equipo con este nombre.");
+                    return;
+                }
+            }
+
+            equipos.add(new Equipo(nombre));
+            JOptionPane.showMessageDialog(null, "✅ Equipo agregado: " + nombre);
+            return;
         }
-        if (equipos.contains(equipo)) {
-            throw new IllegalStateException("El equipo ya está registrado.");
-        }
-        equipos.add(equipo);
     }
 
-
- 
+    // metodo para agregar jugadores a los equipos
     public void agregarJugadorEquipo() {
         if (equipos.isEmpty()) {
             JOptionPane.showMessageDialog(null, "⚠ No hay equipos registrados.");
@@ -78,10 +107,10 @@ public class Torneo {
                 JOptionPane.QUESTION_MESSAGE,
                 null,
                 equipos.toArray(),
-                equipos.get(0)
-        );
+                equipos.get(0));
 
-        if (equipoSeleccionado == null) return;
+        if (equipoSeleccionado == null)
+            return;
 
         // Preguntar cuántos jugadores
         int cantidad = Integer.parseInt(JOptionPane.showInputDialog("¿Cuántos jugadores desea agregar?"));
@@ -90,7 +119,7 @@ public class Torneo {
             if (equipoSeleccionado.getJugadores().size() >= 12) {
                 JOptionPane.showMessageDialog(null,
                         "⚠ El equipo " + equipoSeleccionado.getNombre() +
-                        " ya tiene el máximo de 12 jugadores.");
+                                " ya tiene el máximo de 12 jugadores.");
                 break;
             }
             equipoSeleccionado.agregarJugador();
@@ -99,10 +128,11 @@ public class Torneo {
         if (equipoSeleccionado.getJugadores().size() < 8) {
             JOptionPane.showMessageDialog(null,
                     "⚠ El equipo " + equipoSeleccionado.getNombre() +
-                    " debe tener al menos 8 jugadores para participar.");
+                            " debe tener al menos 8 jugadores para participar.");
         }
     }
 
+    // metodo que muestra la tabla de posiciones
     public void mostrarTablaPosiciones() {
         if (grupos == null || grupos.isEmpty()) {
             JOptionPane.showMessageDialog(null, "⚠ Primero debes crear los grupos y generar partidos.");
@@ -175,8 +205,6 @@ public class Torneo {
                     }
                 }
             }
-
-            // Ordenar tabla del grupo
             tabla.sort((a, b) -> {
                 if (b.puntos != a.puntos)
                     return Integer.compare(b.puntos, a.puntos);
@@ -196,6 +224,7 @@ public class Torneo {
         JOptionPane.showMessageDialog(null, sb.toString(), "Tabla de posiciones", JOptionPane.INFORMATION_MESSAGE);
     }
 
+    // metodo para mostrar los partidos
     public void mostrarPartidos() {
         if (partidos.isEmpty()) {
             JOptionPane.showMessageDialog(null, "⚠ No hay partidos registrados en el torneo.");
@@ -226,13 +255,6 @@ public class Torneo {
         JOptionPane.showMessageDialog(null, sb.toString(), "Partidos", JOptionPane.INFORMATION_MESSAGE);
     }
 
-    public Equipo buscarEquipo(String nombre) {
-        return equipos.stream()
-                .filter(e -> e.getNombre().equalsIgnoreCase(nombre))
-                .findFirst()
-                .orElse(null);
-    }
-
     public void mostrarPartidosPendientes() {
         partidos.stream()
                 .filter(p -> !p.getJugado())
@@ -248,9 +270,10 @@ public class Torneo {
                 .forEach(p -> System.out.println(p.resumen()));
     }
 
+    // metodo para mostrar tabla de goleadores
     public void mostrarGoleadores() {
         if (equipos.isEmpty()) {
-            System.out.println("⚠ No hay equipos en el torneo.");
+            JOptionPane.showMessageDialog(null, "⚠ No hay equipos en el torneo.");
             return;
         }
 
@@ -260,16 +283,29 @@ public class Torneo {
         }
 
         if (goleadores.isEmpty()) {
-            System.out.println("⚠ No hay jugadores registrados en el torneo.");
+            JOptionPane.showMessageDialog(null, "⚠ No hay jugadores registrados en el torneo.");
             return;
         }
 
+        // 🔹 Filtrar solo jugadores con al menos 1 gol
+        goleadores = goleadores.stream()
+                .filter(j -> j.getGoles() > 0)
+                .toList();
+
+        if (goleadores.isEmpty()) {
+            JOptionPane.showMessageDialog(null, "⚠ No hay jugadores que hayan marcado goles todavía.");
+            return;
+        }
+
+        // Ordenar por goles (de mayor a menor)
         goleadores.sort((j1, j2) -> Integer.compare(j2.getGoles(), j1.getGoles()));
 
-        System.out.println("\n🏆 TABLA DE GOLEADORES");
-        System.out.println("-------------------------------------------------");
-        System.out.printf("%-20s %-15s %-10s%n", "Jugador", "Equipo", "Goles");
-        System.out.println("-------------------------------------------------");
+        // Construir la tabla como texto
+        StringBuilder sb = new StringBuilder();
+        sb.append("🏆 TABLA DE GOLEADORES\n");
+        sb.append("-------------------------------------------------\n");
+        sb.append(String.format("%-20s %-15s %-10s%n", "Jugador", "Equipo", "Goles"));
+        sb.append("-------------------------------------------------\n");
 
         for (Jugador j : goleadores) {
             String equipo = equipos.stream()
@@ -278,15 +314,24 @@ public class Torneo {
                     .map(Equipo::getNombre)
                     .orElse("Desconocido");
 
-            System.out.printf("%-20s %-15s %-10d%n",
+            sb.append(String.format("%-20s %-15s %-10d%n",
                     j.getNombre(),
                     equipo,
-                    j.getGoles());
+                    j.getGoles()));
         }
 
-        System.out.println("-------------------------------------------------\n");
+        sb.append("-------------------------------------------------");
+
+        // Mostrar en JOptionPane con monoespaciado para que quede tabulado
+        JTextArea textArea = new JTextArea(sb.toString());
+        textArea.setFont(new java.awt.Font("monospaced", java.awt.Font.PLAIN, 12));
+        textArea.setEditable(false);
+
+        JOptionPane.showMessageDialog(null, new JScrollPane(textArea),
+                "Tabla de Goleadores", JOptionPane.INFORMATION_MESSAGE);
     }
 
+    // metodo para crear los grupos de forma aleatoria
     public List<List<Equipo>> crearGrupos() {
         if (gruposGenerados) {
             JOptionPane.showMessageDialog(null, "⚠ Los grupos ya fueron creados. No se pueden volver a generar.");
@@ -294,7 +339,7 @@ public class Torneo {
         }
 
         if (equipos == null || equipos.size() < 12) {
-            throw new IllegalStateException("⚠ Se necesitan mínimo 12 equipos para crear grupos.");
+            JOptionPane.showMessageDialog(null, "debe de haber minimo 12 equipos");
         }
 
         List<Equipo> copiaEquipos = new ArrayList<>(equipos);
@@ -340,23 +385,7 @@ public class Torneo {
         return clasificados;
     }
 
-    public Partido sortearPartido() {
-        if (equipos.size() < 2) {
-            throw new IllegalStateException("No hay suficientes equipos registrados para sortear un partido.");
-        }
-
-        Equipo local = equipos.get((int) (Math.random() * equipos.size()));
-        Equipo visitante;
-        do {
-            visitante = equipos.get((int) (Math.random() * equipos.size()));
-        } while (visitante.equals(local));
-
-        // Crear el partido sin fecha asignada (se programará después)
-        Partido partido = new Partido(local, visitante, null);
-        partidos.add(partido);
-        return partido;
-    }
-
+    // metodo para sortear los partidos con los grupos ya creados
     public void generarPartidosDeGrupos() {
         if (grupos == null || grupos.isEmpty()) {
             throw new IllegalStateException("⚠ Primero debes crear los grupos (usa Iniciar Torneo).");
@@ -387,6 +416,7 @@ public class Torneo {
         JOptionPane.showMessageDialog(null, "✅ Se generaron " + totalPartidos + " partidos de fase de grupos.");
     }
 
+    // metodo para comprobar datos de jugador
     private Integer pedirEnteroValido(String mensaje, int min, int max) {
         while (true) {
             String input = JOptionPane.showInputDialog(null, mensaje);
@@ -405,6 +435,7 @@ public class Torneo {
         }
     }
 
+    // metodo para programar fecha del partido
     public void programarPartido() {
         // Filtrar partidos pendientes (sin fecha)
         List<Partido> partidosPendientes = new ArrayList<>();
@@ -458,7 +489,11 @@ public class Torneo {
 
                 // ✅ Año
                 while (true) {
-                    anio = pedirEnteroValido("Ingrese el año del partido:", hoy.getYear(), 2100);
+                    Integer anioTmp = pedirEnteroValido("Ingrese el año del partido:", hoy.getYear(), 2100);
+                    if (anioTmp == null)
+                        return; // Canceló
+                    anio = anioTmp;
+
                     if (anio < hoy.getYear()) {
                         JOptionPane.showMessageDialog(null, "⚠ El año no puede ser menor al actual.");
                     } else {
@@ -468,7 +503,11 @@ public class Torneo {
 
                 // ✅ Mes
                 while (true) {
-                    mes = pedirEnteroValido("Ingrese el mes (1-12):", 1, 12);
+                    Integer mesTmp = pedirEnteroValido("Ingrese el mes (1-12):", 1, 12);
+                    if (mesTmp == null)
+                        return; // Canceló
+                    mes = mesTmp;
+
                     if (anio == hoy.getYear() && mes < hoy.getMonthValue()) {
                         JOptionPane.showMessageDialog(null,
                                 "⚠ El mes no puede ser menor al mes actual (" + hoy.getMonthValue() + ").");
@@ -480,7 +519,11 @@ public class Torneo {
                 // ✅ Día
                 while (true) {
                     int maxDia = YearMonth.of(anio, mes).lengthOfMonth();
-                    dia = pedirEnteroValido("Ingrese el día (1-" + maxDia + "):", 1, maxDia);
+                    Integer diaTmp = pedirEnteroValido("Ingrese el día (1-" + maxDia + "):", 1, maxDia);
+                    if (diaTmp == null)
+                        return; // Canceló
+                    dia = diaTmp;
+
                     if (anio == hoy.getYear() && mes == hoy.getMonthValue() && dia < hoy.getDayOfMonth()) {
                         JOptionPane.showMessageDialog(null,
                                 "⚠ El día no puede ser menor al día actual (" + hoy.getDayOfMonth() + ").");
@@ -491,7 +534,11 @@ public class Torneo {
 
                 // ✅ Hora
                 while (true) {
-                    hora = pedirEnteroValido("Ingrese la hora (0-23):", 0, 23);
+                    Integer horaTmp = pedirEnteroValido("Ingrese la hora (0-23):", 0, 23);
+                    if (horaTmp == null)
+                        return; // Canceló
+                    hora = horaTmp;
+
                     if (anio == hoy.getYear() && mes == hoy.getMonthValue() && dia == hoy.getDayOfMonth() &&
                             hora < LocalTime.now().getHour()) {
                         JOptionPane.showMessageDialog(null,
@@ -503,7 +550,11 @@ public class Torneo {
 
                 // ✅ Minuto
                 while (true) {
-                    minuto = pedirEnteroValido("Ingrese los minutos (0-59):", 0, 59);
+                    Integer minutoTmp = pedirEnteroValido("Ingrese los minutos (0-59):", 0, 59);
+                    if (minutoTmp == null)
+                        return; // Canceló
+                    minuto = minutoTmp;
+
                     if (anio == hoy.getYear() && mes == hoy.getMonthValue() && dia == hoy.getDayOfMonth() &&
                             hora == LocalTime.now().getHour() && minuto <= LocalTime.now().getMinute()) {
                         JOptionPane.showMessageDialog(null,
@@ -535,6 +586,7 @@ public class Torneo {
         }
     }
 
+    // metodo para registrar el resultado del partido y ingresar las tarjetas
     public void registrarResultado() {
         if (partidos == null || partidos.isEmpty()) {
             JOptionPane.showMessageDialog(null, "⚠ No hay partidos programados");
