@@ -6,7 +6,7 @@ public class DatosPrueba {
     public static void cargar(Torneo torneo) {
         String[] nombresEquipos = {
                 "Leones FC", "Tigres Dorados", "Águilas Rojas", "Toros Negros", "Dragones Azules",
-                "Cóndores", "Pumas", "Halcones", "Guerreros", "Titanes"
+                "Cóndores", "Pumas", "Halcones", "Guerreros", "Titanes","psg","madrid"
         };
 
         String[] nombresJugadores = {
@@ -26,7 +26,7 @@ public class DatosPrueba {
             Equipo equipo = new Equipo(nombreEquipo);
 
             // 🔹 Crear 10 jugadores por equipo
-            for (int i = 1; i <= 10; i++) {
+            for (int i = 1; i <= 12; i++) {
                 String nombre = nombresJugadores[rand.nextInt(nombresJugadores.length)] + " " +
                                 apellidos[rand.nextInt(apellidos.length)];
 

@@ -1,4 +1,5 @@
 package model;
+
 import javax.swing.*;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -11,7 +12,7 @@ public class Eliminatoria {
     private Partido partidoFinal;
     private Partido partidoTercerPuesto;
 
-   public List<Partido> getPartidosCuartos() {
+    public List<Partido> getPartidosCuartos() {
         return partidosCuartos;
     }
 
@@ -30,6 +31,61 @@ public class Eliminatoria {
         return partidoTercerPuesto;
     }
 
+    // ✅ Verifica si ya se jugaron todos los partidos de fase de grupos
+    // Dentro de Eliminatoria
+    public void verificarYSortearCuartos(Torneo torneo) {
+        if (torneo.todosPartidosDeGruposJugados() && partidosCuartos.isEmpty()) {
+            List<Equipo> clasificados = torneo.obtenerClasificados();
+            sortearCuartos(clasificados);
+        }
+    }
+
+    // -----------------------------
+    // 🔁 AVANCE AUTOMÁTICO DE FASES
+    // -----------------------------
+    public void verificarAvanceAutomatico(Torneo torneo) {
+        // 1️⃣ Si todos los partidos de grupos se jugaron y no hay cuartos → sortear
+        // cuartos
+        if (torneo.todosPartidosDeGruposJugados() && partidosCuartos.isEmpty()) {
+            List<Equipo> clasificados = torneo.clasificarOchoMejores();
+            sortearCuartos(clasificados);
+            JOptionPane.showMessageDialog(null,
+                    "🏆 Se ha terminado la fase de grupos.\nSe sortearon los cuartos de final automáticamente.");
+            return;
+        }
+
+        // 2️⃣ Si todos los cuartos se jugaron → sortear semifinales
+        if (!partidosCuartos.isEmpty() &&
+                partidosCuartos.stream().allMatch(Partido::getJugado) &&
+                partidosSemifinal.isEmpty()) {
+
+            List<Equipo> ganadores;
+            try {
+                ganadores = obtenerGanadoresCuartos();
+            } catch (Exception e) {
+                System.out.println("⚠ No se puede avanzar a semifinales: " + e.getMessage());
+                return; // ← EVITA PETAR EL PROGRAMA
+            }
+
+            if (ganadores.size() == 4) {
+                sortearSemifinales(ganadores);
+                JOptionPane.showMessageDialog(null,
+                        "✅ Cuartos finalizados.\nSe generaron las semifinales automáticamente.");
+            }
+            return;
+        }
+
+        // 3️⃣ Si todas las semis se jugaron → generar final y tercer puesto
+        if (!partidosSemifinal.isEmpty() &&
+                partidosSemifinal.stream().allMatch(Partido::getJugado) &&
+                partidoFinal == null) {
+
+            generarFinalYtercerPuesto();
+            JOptionPane.showMessageDialog(null,
+                    "🔥 Semifinales finalizadas.\nSe generaron la Final y el 3er Puesto automáticamente.");
+        }
+    }
+
     // -----------------------------
     // 📌 SORTEO DE CUARTOS
     // -----------------------------
@@ -39,7 +95,11 @@ public class Eliminatoria {
             return null;
         }
 
-        partidosCuartos.clear(); // limpiar previos
+        // Si ya hay cuartos generados, no sobrescribir
+        if (!partidosCuartos.isEmpty()) {
+            JOptionPane.showMessageDialog(null, "⚠ Los cuartos ya han sido sorteados.");
+            return null;
+        }
 
         List<Equipo> copia = new ArrayList<>(clasificados);
         Collections.shuffle(copia);
@@ -63,45 +123,122 @@ public class Eliminatoria {
     // -----------------------------
     // 📌 GANADORES DE CUARTOS
     // -----------------------------
-    public List<Equipo> obtenerGanadoresCuartos() {
-        List<Equipo> ganadores = new ArrayList<>();
+   public List<Equipo> obtenerGanadoresCuartos() {
+    List<Equipo> ganadores = new ArrayList<>();
 
-        for (Partido partido : partidosCuartos) {
-            if (!partido.getJugado()) {
-                throw new IllegalStateException("⚠ Aún hay partidos de cuartos sin resultados.");
-            }
-            if (partido.getGolesLocal() > partido.getGolesVisitante()) {
+    for (Partido partido : partidosCuartos) {
+        if (!partido.getJugado()) {
+            throw new IllegalStateException("⚠ Aún hay partidos de cuartos sin resultados.");
+        }
+
+        if (partido.getGolesLocal() > partido.getGolesVisitante()) {
+            ganadores.add(partido.getEquipoLocal());
+        } else if (partido.getGolesVisitante() > partido.getGolesLocal()) {
+            ganadores.add(partido.getEquipoVisitante());
+        } else {
+            // 🟡 EMPATE → REVISAR PENALES
+            if (partido.getPenalesLocal() > partido.getPenalesVisitante()) {
                 ganadores.add(partido.getEquipoLocal());
-            } else if (partido.getGolesVisitante() > partido.getGolesLocal()) {
+            } else if (partido.getPenalesVisitante() > partido.getPenalesLocal()) {
                 ganadores.add(partido.getEquipoVisitante());
             } else {
-                throw new IllegalStateException("⚠ Partido empatado: falta resolver ganador.");
+                throw new IllegalStateException("⚠ Partido empatado sin definición por penales: " + partido);
+            }
+        }
+    }
+
+    if (ganadores.size() != 4) {
+        throw new IllegalStateException("⚠ No hay exactamente 4 ganadores de cuartos.");
+    }
+
+    return ganadores;
+}
+
+
+    /**
+     * Actualiza el partido en las listas internas (si existe) buscando por nombres de equipo.
+     * Esto evita el problema cuando la UI crea/copía una instancia distinta de Partido.
+     */
+    private boolean actualizarPartidoEnListas(Partido partidoExterno, int golesLocal, int golesVisitante) {
+        if (partidoExterno == null) return false;
+
+        // Helper lambda-like manual search: comparo nombres de equipos
+        for (Partido p : partidosCuartos) {
+            if (p.getEquipoLocal().getNombre().equals(partidoExterno.getEquipoLocal().getNombre())
+                    && p.getEquipoVisitante().getNombre().equals(partidoExterno.getEquipoVisitante().getNombre())) {
+                p.setGolesLocal(golesLocal);
+                p.setGolesVisitante(golesVisitante);
+                p.setJugado(true);
+                return true;
             }
         }
 
-        if (ganadores.size() != 4) {
-            throw new IllegalStateException("⚠ No hay exactamente 4 ganadores de cuartos.");
+        for (Partido p : partidosSemifinal) {
+            if (p.getEquipoLocal().getNombre().equals(partidoExterno.getEquipoLocal().getNombre())
+                    && p.getEquipoVisitante().getNombre().equals(partidoExterno.getEquipoVisitante().getNombre())) {
+                p.setGolesLocal(golesLocal);
+                p.setGolesVisitante(golesVisitante);
+                p.setJugado(true);
+                return true;
+            }
         }
 
-        return ganadores;
+        if (partidoFinal != null) {
+            if (partidoFinal.getEquipoLocal().getNombre().equals(partidoExterno.getEquipoLocal().getNombre())
+                    && partidoFinal.getEquipoVisitante().getNombre().equals(partidoExterno.getEquipoVisitante().getNombre())) {
+                partidoFinal.setGolesLocal(golesLocal);
+                partidoFinal.setGolesVisitante(golesVisitante);
+                partidoFinal.setJugado(true);
+                return true;
+            }
+        }
+
+        if (partidoTercerPuesto != null) {
+            if (partidoTercerPuesto.getEquipoLocal().getNombre().equals(partidoExterno.getEquipoLocal().getNombre())
+                    && partidoTercerPuesto.getEquipoVisitante().getNombre().equals(partidoExterno.getEquipoVisitante().getNombre())) {
+                partidoTercerPuesto.setGolesLocal(golesLocal);
+                partidoTercerPuesto.setGolesVisitante(golesVisitante);
+                partidoTercerPuesto.setJugado(true);
+                return true;
+            }
+        }
+
+        // No encontrado en ninguna lista
+        return false;
     }
+
     // En Eliminatoria.java
-public void registrarResultadoYAvanzar(Partido partido, int golesLocal, int golesVisitante) {
-    partido.setGolesLocal(golesLocal);
-    partido.setGolesVisitante(golesVisitante);
-    partido.setJugado(true);
+    public void registrarResultadoYAvanzar(Partido partido, int golesLocal, int golesVisitante) {
+        // Intento actualizar la instancia guardada en mi eliminatoria
+        boolean actualizado = actualizarPartidoEnListas(partido, golesLocal, golesVisitante);
 
-    // ✅ Si ya están todos los partidos de cuartos jugados → avanzar a semifinal
-    if (partidosCuartos.stream().allMatch(Partido::getJugado) && partidosSemifinal.isEmpty()) {
-        List<Equipo> ganadores = obtenerGanadoresCuartos();
-        sortearSemifinales(ganadores);
-    }
+        // Si no encontré la instancia, actualizo la que me pasaron igual (para compatibilidad)
+        if (!actualizado) {
+            partido.setGolesLocal(golesLocal);
+            partido.setGolesVisitante(golesVisitante);
+            partido.setJugado(true);
+            System.out.println("WARN: El partido actualizado no estaba en las listas internas (se actualizó la instancia externa).");
+        }
 
-    // ✅ Si ya están todos los partidos de semifinal jugados → generar final
-    if (partidosSemifinal.stream().allMatch(Partido::getJugado) && partidoFinal == null) {
-        generarFinalYtercerPuesto();
+        // 1. Avanzar a semifinal si corresponde
+        if (partidosCuartos != null && partidosCuartos.size() == 4 &&
+                partidosCuartos.stream().allMatch(Partido::getJugado) &&
+                (partidosSemifinal == null || partidosSemifinal.isEmpty())) {
+
+            List<Equipo> ganadores = obtenerGanadoresCuartos();
+            if (ganadores.size() == 4) { // Seguridad extra
+                sortearSemifinales(ganadores);
+            }
+        }
+
+        // 2. Avanzar a final y tercer puesto si corresponde
+        if (partidosSemifinal != null && partidosSemifinal.size() == 2 &&
+                partidosSemifinal.stream().allMatch(Partido::getJugado) &&
+                partidoFinal == null) {
+
+            generarFinalYtercerPuesto();
+        }
     }
-}
 
 
     // -----------------------------
@@ -113,17 +250,24 @@ public void registrarResultadoYAvanzar(Partido partido, int golesLocal, int gole
             return;
         }
 
+        // Evito volver a sortear si ya hay semifinales creadas
+        if (!partidosSemifinal.isEmpty()) {
+            JOptionPane.showMessageDialog(null, "⚠ Las semifinales ya han sido generadas.");
+            return;
+        }
+
         Collections.shuffle(ganadoresCuartos);
         partidosSemifinal.clear();
 
-         Partido semi1 = new Partido(ganadoresCuartos.get(0), ganadoresCuartos.get(1), null);
-    Partido semi2 = new Partido(ganadoresCuartos.get(2), ganadoresCuartos.get(3), null);
+        Partido semi1 = new Partido(ganadoresCuartos.get(0), ganadoresCuartos.get(1), null);
+        Partido semi2 = new Partido(ganadoresCuartos.get(2), ganadoresCuartos.get(3), null);
 
         partidosSemifinal.add(semi1);
         partidosSemifinal.add(semi2);
 
         String mensaje = "🎲 SORTEO DE SEMIFINALES:\n" +
-                "Semifinal 1: " + semi1.getEquipoLocal().getNombre() + " vs " + semi1.getEquipoVisitante().getNombre() + "\n" +
+                "Semifinal 1: " + semi1.getEquipoLocal().getNombre() + " vs " + semi1.getEquipoVisitante().getNombre()
+                + "\n" +
                 "Semifinal 2: " + semi2.getEquipoLocal().getNombre() + " vs " + semi2.getEquipoVisitante().getNombre();
 
         JOptionPane.showMessageDialog(null, mensaje);
@@ -135,6 +279,7 @@ public void registrarResultadoYAvanzar(Partido partido, int golesLocal, int gole
     private List<Equipo> obtenerGanadores(List<Partido> partidos) {
         List<Equipo> ganadores = new ArrayList<>();
         for (Partido p : partidos) {
+            if (!p.getJugado()) continue; // seguridad
             if (p.getGolesLocal() > p.getGolesVisitante()) {
                 ganadores.add(p.getEquipoLocal());
             } else if (p.getGolesVisitante() > p.getGolesLocal()) {
@@ -147,6 +292,7 @@ public void registrarResultadoYAvanzar(Partido partido, int golesLocal, int gole
     private List<Equipo> obtenerPerdedores(List<Partido> partidos) {
         List<Equipo> perdedores = new ArrayList<>();
         for (Partido p : partidos) {
+            if (!p.getJugado()) continue; // seguridad
             if (p.getGolesLocal() < p.getGolesVisitante()) {
                 perdedores.add(p.getEquipoLocal());
             } else if (p.getGolesVisitante() < p.getGolesLocal()) {
@@ -159,26 +305,27 @@ public void registrarResultadoYAvanzar(Partido partido, int golesLocal, int gole
     // -----------------------------
     // 📌 FINAL Y TERCER PUESTO
     // -----------------------------
-    public void generarFinalYtercerPuesto() {
-        if (partidosSemifinal == null || partidosSemifinal.size() != 2) {
-            throw new IllegalStateException("❌ No se puede generar final sin haber jugado las semifinales.");
-        }
+public void generarFinalYtercerPuesto() {
+    if (partidosSemifinal == null || partidosSemifinal.size() < 2) return;
 
-        List<Equipo> ganadores = obtenerGanadores(partidosSemifinal);
-        List<Equipo> perdedores = obtenerPerdedores(partidosSemifinal);
+    Partido semi1 = partidosSemifinal.get(0);
+    Partido semi2 = partidosSemifinal.get(1);
 
-        if (ganadores.size() != 2 || perdedores.size() != 2) {
-            throw new IllegalStateException("❌ Deben haber exactamente 2 ganadores y 2 perdedores.");
-        }
+    Equipo finalista1 = semi1.getGanador();
+    Equipo finalista2 = semi2.getGanador();
 
-        partidoFinal = new Partido(ganadores.get(0), ganadores.get(1), null);
-        partidoTercerPuesto = new Partido(perdedores.get(0), perdedores.get(1), null);
+    Equipo perdedor1 = semi1.getPerdedor();
+    Equipo perdedor2 = semi2.getPerdedor();
 
-        JOptionPane.showMessageDialog(null,
-                "✅ Final y partido por el 3er puesto generados:\n" +
-                        "🏆 Final: " + ganadores.get(0).getNombre() + " vs " + ganadores.get(1).getNombre() + "\n" +
-                        "🥉 Tercer Puesto: " + perdedores.get(0).getNombre() + " vs " + perdedores.get(1).getNombre());
-    }
+    // ✅ Crear partidos SIN FECHA para que puedan ser programados después
+    partidoFinal = new Partido(finalista1, finalista2);
+    partidoTercerPuesto = new Partido(perdedor1, perdedor2);
+
+    // ✅ Asegurar explícitamente que no tienen fecha programada
+    partidoFinal.setFechaHora(null);
+    partidoTercerPuesto.setFechaHora(null);
+}
+
 
     // -----------------------------
     // 📌 Mostrar toda la eliminatoria
@@ -187,16 +334,27 @@ public void registrarResultadoYAvanzar(Partido partido, int golesLocal, int gole
         JTextArea area = new JTextArea();
         area.setEditable(false);
 
+        // CUARTOS
         area.append("==== CUARTOS ====\n");
-        for (Partido p : partidosCuartos) {
-            area.append(p.toString() + "\n");
+        if (partidosCuartos != null && !partidosCuartos.isEmpty()) {
+            for (Partido p : partidosCuartos) {
+                area.append(p.toString() + "\n");
+            }
+        } else {
+            area.append("(Aún no se han generado los partidos de cuartos)\n");
         }
 
+        // SEMIFINALES
         area.append("\n==== SEMIFINALES ====\n");
-        for (Partido p : partidosSemifinal) {
-            area.append(p.toString() + "\n");
+        if (partidosSemifinal != null && !partidosSemifinal.isEmpty()) {
+            for (Partido p : partidosSemifinal) {
+                area.append(p.toString() + "\n");
+            }
+        } else {
+            area.append("(Aún no se han generado los partidos de semifinal)\n");
         }
 
+        // TERCER PUESTO
         area.append("\n==== TERCER PUESTO ====\n");
         if (partidoTercerPuesto != null) {
             area.append(partidoTercerPuesto.toString() + "\n");
@@ -204,6 +362,7 @@ public void registrarResultadoYAvanzar(Partido partido, int golesLocal, int gole
             area.append("(Aún no definido)\n");
         }
 
+        // FINAL
         area.append("\n==== FINAL ====\n");
         if (partidoFinal != null) {
             area.append(partidoFinal.toString() + "\n");
@@ -211,7 +370,16 @@ public void registrarResultadoYAvanzar(Partido partido, int golesLocal, int gole
             area.append("(Aún no definido)\n");
         }
 
+        // Mensaje para debug rápido en consola
+        System.out.println("DEBUG: partidosCuartos = " + (partidosCuartos == null ? "null" : partidosCuartos.size()));
+        System.out.println(
+                "DEBUG: partidosSemifinal = " + (partidosSemifinal == null ? "null" : partidosSemifinal.size()));
+        System.out.println("DEBUG: partidoTercerPuesto = " + (partidoTercerPuesto == null ? "null" : "listo"));
+        System.out.println("DEBUG: partidoFinal = " + (partidoFinal == null ? "null" : "listo"));
+
+        // Mostrar ventana
         JOptionPane.showMessageDialog(null, new JScrollPane(area),
                 "Eliminatoria", JOptionPane.INFORMATION_MESSAGE);
     }
+
 }

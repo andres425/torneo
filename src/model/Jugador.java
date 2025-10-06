@@ -12,6 +12,9 @@ public class Jugador {
     private int tarjetasRojas;
     private boolean suspendido;
     
+    public Jugador(){
+        
+    }
     
     public Jugador(String nombre, int edad, String posicion, int numero) {
     this(nombre, edad, Posicion.valueOf(posicion.toUpperCase()), numero);
@@ -80,8 +83,10 @@ public class Jugador {
 
     public int getEdad() { return edad; }
     public void setEdad(int edad) {
-        if (edad > 0) this.edad = edad;
-        else throw new IllegalArgumentException("la edad debe ser mayor a 0");
+        if (edad < 12 || edad > 60) 
+         throw new IllegalArgumentException("La edad debe estar entre 12 y 60 años.");
+         else 
+         this.edad = edad;
     }
 
     public Posicion getPosicion() { return posicion; }

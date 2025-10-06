@@ -115,6 +115,15 @@ public class Equipo {
             throw new IllegalArgumentException("Los goles en contra deben ser mayor o igual a 0");
         }
     }
+    public boolean existeNumeroCamiseta(int numero) {
+    for (Jugador j : jugadores) {
+        if (j.getNumero() == numero) {
+            return true;
+        }
+    }
+    return false;
+}
+
 
   
 public void agregarJugador() {

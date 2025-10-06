@@ -30,8 +30,27 @@ private Equipo ganadorPorPenales;
         this.golesVisitante = 0;
         this.jugado = false;
     }
+    public Partido(Equipo local, Equipo visitante) {
+    this.equipoLocal = local;
+    this.equipoVisitante = visitante;
+    this.fechaHora = null; // Se programará después
+    this.jugado = false;
+}
 
     // Getters y setters
+
+public Integer getPenalesLocal() {
+    return penalesLocal;
+}
+
+public Integer getPenalesVisitante() {
+    return penalesVisitante;
+}
+
+public Equipo getGanadorPorPenales() {
+    return ganadorPorPenales;
+}
+
     public LocalDateTime getFechaHora() {
         return fechaHora;
     }
@@ -87,6 +106,7 @@ private Equipo ganadorPorPenales;
     public List<String> getEventos() {
         return eventos;
     }
+
 
     // Reglas de partido
     public boolean ganoLocal() {
@@ -152,6 +172,23 @@ public void agregarGol(Equipo equipo, Jugador jugador) {
             throw new IllegalArgumentException("Tipo de tarjeta no válido: " + tipo);
         }
     }
+    public Equipo getGanador() {
+    if (getGolesLocal() > getGolesVisitante()) {
+        return equipoLocal;
+    } else if (getGolesVisitante() > getGolesLocal()) {
+        return equipoVisitante;
+    } else if (ganadorPorPenales != null) {
+        return ganadorPorPenales;
+    }
+    return null; // Empate sin definir → no debería pasar en eliminatorias
+}
+
+public Equipo getPerdedor() {
+    Equipo ganador = getGanador();
+    if (ganador == null) return null;
+    return (ganador == equipoLocal) ? equipoVisitante : equipoLocal;
+}
+
 
     public String resumen() {
         if (!jugado) {
